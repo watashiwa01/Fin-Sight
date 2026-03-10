@@ -392,21 +392,22 @@ def _switch_to_tab(idx: int):
     (function() {{
         var tries = 0;
         function clickTab() {{
-            var tabs = window.parent.document.querySelectorAll('[data-baseweb="tab"]');
+            var parentDoc = window.parent.document;
+            var tabs = parentDoc.querySelectorAll('[data-baseweb="tab"]');
             if (tabs.length > {idx}) {{
                 tabs[{idx}].click();
-            }} else if (tries++ < 20) {{
-                setTimeout(clickTab, 200);
+            }} else if (tries++ < 50) {{
+                setTimeout(clickTab, 100);
             }}
         }}
-        setTimeout(clickTab, 150);
+        setTimeout(clickTab, 200);
     }})();
     </script>
     """
     st.components.v1.html(js, height=0, scrolling=False)
 
 # Fire tab switch if requested (must run before st.tabs renders)
-_pending_tab = st.session_state.active_tab
+_pending_tab = st.session_state.get("active_tab", 0)
 if _pending_tab != 0:
     st.session_state.active_tab = 0  # reset so it doesn't loop
 
@@ -698,7 +699,6 @@ with tab1:
             )
             st.session_state.gst_validation = gst_result
             st.session_state.pipeline_step = max(st.session_state.pipeline_step, 2)
-            st.session_state.active_tab = 2  # Auto-redirect to Research Dashboard
             st.rerun()
 
     if st.session_state.gst_validation:
