@@ -696,8 +696,8 @@ with tab1:
                 extracted_data=st.session_state.extracted_data,
                 company_data=st.session_state.company_data
             )
-            st.session_state.gst_validation = gst_result
             st.session_state.pipeline_step = max(st.session_state.pipeline_step, 2)
+            st.session_state.active_tab = 2  # Auto-redirect to Research Dashboard
             st.rerun()
 
     if st.session_state.gst_validation:
@@ -713,25 +713,19 @@ with tab1:
         
         st.markdown(gst.get("narrative", "Analysis complete."))
         
-        with st.expander("🛠️ GST Debug Logs"):
+        with st.expander("🛠️ System Verification Logs"):
             st.json(gst)
 
         # Display Narrative and Flags
         st.markdown(f"#### 📝 Auditor's Commentary")
         st.markdown(gst.get("narrative", "No narrative generated."))
 
-        if gst.get("flags"):
-            st.markdown("#### 🚩 Risk Flags")
-            for flag in gst["flags"]:
-                severity_color = {"high": "#EF4444", "medium": "#F59E0B", "low": "#10B981"}.get(flag["severity"], "#94A3B8")
-                st.markdown(f"""
-                <div style="padding: 10px; border-left: 4px solid {severity_color}; background: rgba(255,255,255,0.05); border-radius: 4px; margin-bottom: 8px;">
-                    <span style="color: {severity_color}; font-weight: bold;">[{flag['type']}]</span> {flag['message']}
                 </div>
                 """, unsafe_allow_html=True)
 
-        with st.expander("📊 Detailed GST JSON Analysis"):
-            st.json(gst)
+        if st.button("Proceed to Research Dashboard ➡", type="primary", use_container_width=True):
+            st.session_state.active_tab = 2
+            st.rerun()
 
 
 # ═══════════════════════════════════════════════════════════
