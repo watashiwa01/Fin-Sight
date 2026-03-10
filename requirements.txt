@@ -1,0 +1,51 @@
+# Intelli-Credit Dependencies
+
+# ── Core Framework ─────────────────────────
+streamlit>=1.30.0
+python-dotenv>=1.0.0
+
+# ── LLM & AI ───────────────────────────────
+langchain>=0.3.0
+langgraph>=0.2.0
+langchain-openai>=0.2.0
+langchain-anthropic>=0.2.0        # Claude / Anthropic support
+langchain-community>=0.3.0
+openai>=1.0.0
+anthropic>=0.25.0
+
+# ── Azure Document Intelligence (Primary OCR) ──
+azure-ai-documentintelligence>=1.0.0
+azure-core>=1.30.0
+
+# ── Document Processing ─────────────────────
+pdfplumber>=0.10.0
+PyMuPDF>=1.23.0
+pdf2image>=1.16.0                 # Tesseract OCR helper
+
+# ── Vector Store & Databases ────────────────
+chromadb>=0.4.0
+duckdb>=0.9.0
+
+# ── Databricks Delta Lake ───────────────────
+databricks-sql-connector>=3.0.0
+
+# ── ML & Scoring ───────────────────────────
+xgboost>=2.0.0
+shap>=0.44.0
+scikit-learn>=1.3.0
+pandas>=2.0.0
+numpy>=1.24.0
+joblib>=1.3.0
+
+# ── Report Generation ───────────────────────
+python-docx>=1.0.0
+matplotlib>=3.7.0
+
+# ── Web Search & Scraping ──────────────────
+tavily-python>=0.3.0
+beautifulsoup4>=4.12.0
+requests>=2.31.0
+playwright>=1.40.0                # MCA21 / e-Courts scraping
+
+# ── Visualization ──────────────────────────
+plotly>=5.18.0

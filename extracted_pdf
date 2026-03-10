@@ -1,0 +1,198 @@
+INTELLI-CREDIT
+Next-Gen Corporate Credit Appraisal Engine
+Deep Analysis & Detailed System Architecture
+Hackathon Build Guide
+This document provides a complete technical blueprint for building the Intelli-Credit AI-powered Credit
+Decisioning Engine. It covers system architecture, component-by-component implementation strategy,
+the recommended tech stack, and curated open-source GitHub references to accelerate development.
+1. Deep Problem Analysis
+What the Problem Is Really Asking
+The Intelli-Credit challenge requires building a multi-agent AI pipeline that replaces a human credit manager
+end-to-end. It stacks three distinct hard problems together:
+# Problem Why It's Hard
+1 Multi-format document intelligence Scanned Indian PDFs, GSTR reconciliation, bank statement parsing with messy layouts
+2 Autonomous web research Finding litigation, MCA filings, RBI regulations, promoter news without human input
+3 Explainable credit decision A transparent Word/PDF memo with reasons — not a black box ML output
+India-Specific Complexity
+The Indian context introduces domain-specific challenges that generic LLMs handle poorly. The following
+nuances must be explicitly addressed in the solution:
+GSTR-2A vs 3B Reconciliation: 2A is auto-populated purchase register; 3B is self-declared return. Mismatches
+signal circular trading or input credit fraud.
+CIBIL Commercial Reports: India's credit bureau format differs from Western equivalents. CMR (CIBIL MSME
+Rank) and CCR (Company Credit Report) have unique fields.
+MCA21 Portal: Director DIN tracking, charge satisfaction status, annual return filings — all must be scraped from
+mca.gov.in.
+e-Courts / NJDG: National Judicial Data Grid holds litigation records. Must search by company name AND
+promoter names.
+Scanned Regional PDFs: Many Indian SME documents are scanned in low DPI or contain Hindi/regional
+language headers requiring OCR tuning.
+2. System Architecture
+High-Level Pipeline Overview
+The system is organized around three pillars (as defined in the problem statement), all feeding into a shared
+knowledge store, which drives the final Recommendation Engine.
+FRONTEND / UI (Streamlit or React — Credit Officer Portal)
+Upload Docs | Enter Qualitative Notes | View CAM Report
+PILLAR 1: DATA INGESTOR
+Document Classifier
+OCR Engine (Tesseract / Azure DI)
+LLM Extractor (Claude / GPT-4o)
+GST vs Bank Stmt Cross-Validator
+PILLAR 2: RESEARCH AGENT
+Web Search Agent (Tavily/SerpAPI)
+MCA / e-Courts Scraper Agent
+Qualitative Input Risk Adjuster
+News Sentiment Analyzer
+SHARED KNOWLEDGE STORE — ChromaDB (Vector) + SQLite/DuckDB (Structured)
+PILLAR 3: RECOMMENDATION ENGINE
+Feature Builder — 5 Cs of Credit (Character, Capacity, Capital, Collateral, Conditions)
+Scoring Model — XGBoost + SHAP Explainability
+CAM Generator — LLM Prompt + python-docx Template
+OUTPUT: Credit Appraisal Memo (Word / PDF) + Loan Decision + Explainable Reasoning
+3. Component-by-Component Build Plan
+Pillar 1 — Data Ingestor
+Step 1: Document Classification
+Use a simple classifier (or LLM prompt) to route each uploaded PDF to the right parser: Annual Report, Bank
+Statement, GST Return, Legal Notice, Sanction Letter, etc. File naming + a zero-shot LLM classification prompt
+is sufficient for a hackathon.
+Step 2: OCR + Parsing
+• Scanned PDFs: pytesseract + pdf2image, OR Azure Document Intelligence / AWS Textract for higher accuracy
+on Indian scans
+• Digital PDFs: pdfplumber or PyMuPDF for text extraction with layout preservation
+• Tables in bank statements: camelot or tabula-py
+• Multi-format enterprise option: llmware (open source, handles OCR, tables, images in one pipeline)
+Step 3: LLM-Powered Structured Extraction
+After OCR, chunk the text and pass it to Claude/GPT-4o with a structured extraction prompt. Request JSON
+output for easy downstream processing:
+Extract: Revenue, EBITDA, Total Debt, Net Worth, Director Names, Auditor Remarks, Related
+Party Transactions. Return as JSON with keys: revenue, ebitda, total_debt, net_worth,
+directors[], auditor_remarks, related_party_flag.
+Step 4: GST vs Bank Statement Cross-Validation (Circular Trading Detection)
+• Parse GSTR-3B (declared sales) vs GSTR-2A (purchase-side auto-populated register)
+• Compare against bank credit entries for the same period
+• Flag if bank deposits significantly exceed GST turnover — potential revenue inflation
+• Flag large cash credits with no GST equivalent — potential circular trading
+• Compute a GST Compliance Score (ratio of filed months to total months in period)
+Pillar 2 — Research Agent (Digital Credit Manager)
+Use LangGraph to orchestrate multiple specialized sub-agents running in parallel. Each agent has a specific
+research mandate:
+News Agent Searches for [company name] + [promoter names] + 'fraud / NPA / default / litigation' via Tavily
+or SerpAPI. Runs sentiment analysis on returned articles.
+MCA Agent Scrapes mca.gov.in for director DIN history, charges filed against the company, satisfaction of
+charges, ROC show-cause notices.
+e-Courts Agent Searches the National Judicial Data Grid (njdg.gov.in) for cases filed by or against the
+company and its promoters.
+Sector Agent Fetches latest RBI/SEBI/MoF circulars relevant to the company's NIC code / industry sector.
+Summarizes regulatory headwinds.
+Qualitative Input
+Portal
+A Streamlit form where the Credit Officer types notes (e.g., 'Factory at 40% capacity'). These
+get embedded as high-weight nodes in the scoring pipeline.
+Pillar 3 — Recommendation Engine
+Feature Engineering — The 5 Cs of Credit
+C Dimension Key Features
+Character Trustworthiness & track recordLitigation count, promoter news sentiment score, MCA compliance, prior defaults
+Capacity Ability to repay DSCR, ICR, Revenue CAGR (3yr), EBITDA margins, operating leverage
+Capital Financial strength Debt/Equity ratio, Tangible Net Worth, promoter equity contribution %
+Collateral Security coverage Asset Coverage Ratio, security type (immovable/movable), LTV, encumbrance
+Conditions External environment Industry outlook score, regulatory risk rating, qualitative notes weight
+Scoring Model — XGBoost + SHAP
+XGBoost with SHAP (SHapley Additive exPlanations) is the optimal choice for this problem. SHAP values
+provide per-feature contribution scores that directly satisfy the evaluation criterion on explainability. The output
+can state exactly: 'Rejected due to high litigation risk (-23 pts) despite strong GST flows (+18 pts).' Include a
+SHAP waterfall chart in the CAM for visual impact.
+CAM Generator
+Feed extracted features + SHAP scores + research findings into an LLM prompt structured around the 5 Cs
+template. Use python-docx to render the final Word document with proper headings, tables, and the SHAP chart
+embedded as an image. Optionally convert to PDF using LibreOffice in headless mode or WeasyPrint.
+Sample CAM Decision Output: APPROVED — Rs. 5 Crore Term Loan @ 11.5% p.a. (3-year tenor) Rationale: Strong
+GST-verified turnover of Rs. 28 Cr/yr (+18 pts) and clean MCA records (+12 pts) offset moderate DSCR of 1.3x (-8 pts).
+Promoter news sentiment neutral. Qualitative note 'Factory at 40% capacity' applied as conditional risk flag (-5 pts).
+Collateral coverage at 1.6x provides adequate buffer. Net Score: 74/100 (Threshold: 60).
+4. Recommended Tech Stack
+Layer Tool / Library Purpose
+Orchestration LangGraph + LangChain Multi-agent pipeline coordination
+LLM Claude API (claude-sonnet-4-6) Extraction, summarization, CAM generation
+OCR Azure Document Intelligence High-accuracy scanned Indian PDF parsing
+OCR (fallback) Tesseract + pdf2image Open-source offline OCR
+PDF Parsing pdfplumber + PyMuPDF Digital PDF text and table extraction
+Vector Store ChromaDB (local) Semantic search over extracted documents
+Structured DB DuckDB or SQLite Storing parsed financial metrics
+ML Scoring XGBoost + SHAP Credit scoring + explainability
+Web Search Tavily API or SerpAPI News, litigation, regulatory research
+Report Generation python-docx + ReportLab Word and PDF CAM output
+Frontend Streamlit Fastest Credit Officer portal for hackathon
+Data Platform Databricks (Delta Lake) As specified in problem statement
+Scraping Playwright + BeautifulSoup MCA21 and e-Courts portal scraping
+5. GitHub Repositories to Bootstrap From
+Document Intelligence / RAG
+infiniflow/ragflow
+github.com/infiniflow/ragflow
+Production-grade open-source RAG engine with deep document understanding for
+unstructured data in complex formats. Best for the document ingestion layer.
+llmware-ai/llmware github.co
+m/llmware-ai/llmware
+Enterprise RAG pipeline with OCR on embedded images, table extraction, and
+financial document parsing examples built-in.
+aws-samples/aws-agentic-d
+ocument-assistant github.co
+m/aws-samples/aws-agenticdocument-assistant
+Extends RAG with batch entity extraction and SQL querying for analytical questions
+over business documents.
+Multi-Agent Research
+guy-hartstein/company-res
+earch-agent github.com/guyhartstein/company-research-a
+gent
+Multi-agent deep diligence tool using LangGraph + Tavily. Gathers company data from
+news, financial reports, and industry analyses. Very close match to Pillar 2.
+Chen-zexi/LangAlpha github
+.com/Chen-zexi/LangAlpha
+Multi-agent financial research workflow with web crawlers, financial data tools, and
+structured report generation.
+tarun7r/deep-research-agen
+t github.com/tarun7r/deep-res
+earch-agent
+Production-ready multi-agent research with LangGraph, citation-backed reports,
+credibility scoring, and local LLM support via Ollama.
+Credit Scoring / ML
+arifasfe/credit-scoring-engi
+ne github.com/arifasfe/creditscoring-engine
+ML credit scoring system with loan decisions, probability assessments, and suggested
+loan amounts — directly applicable to Pillar 3.
+maixbach/credit-risk-analys
+is-using-ML github.com/maix
+bach/credit-risk-analysis-usin
+g-ML
+XGBoost-based credit risk analysis with SHAP explainability charts.
+Bank Statement & Financial Doc Parsing
+johnsonhk88/AI-Bank-State
+ment-Document-Automatio
+n github.com/johnsonhk88/AIBank-Statement-Document-A
+utomation-By-LLM-And-Perso
+nal-Finanical-Analysis-Predict
+ion
+Uses LLM + RAG with LangChain to extract and query structured data from
+complex-layout bank statement PDFs.
+6. Hackathon Winning Strategy
+The judges will score on Explainability and Indian Context Sensitivity above all else. Here is how to dominate
+each evaluation criterion:
+Extraction Accuracy
+✓ Use Azure Document Intelligence (not raw Tesseract) for scanned PDFs — it handles low-DPI and
+mixed-language documents better
+✓ Test with actual GSTR-3B and bank statement PDFs before the hackathon — format quirks will surprise you
+✓ Add a confidence score to every extracted field — judges appreciate humility
+Research Depth
+✓ Hard-code MCA21 scraping — most teams will skip this; it's an easy differentiator
+✓ Add e-Courts / NJDG lookup by company CIN and promoter PAN (if available)
+✓ Show a 'research provenance' log — list every source the agent checked, even null results
+Explainability
+✓ Embed a SHAP waterfall chart in the CAM — visual impact is significant
+✓ Every scored factor should have a plain-English reason (not just a number)
+✓ Include a 'decision audit trail' section in the memo showing every data point used
+Indian Context Sensitivity
+✓ Explicitly call out GSTR-2A vs 3B reconciliation logic in your demo
+✓ Name-check CIBIL CMR / CCR in the Character section of the CAM
+✓ Show that your OCR handles Devanagari headers gracefully (even if just via detection + skip)
+✓ Include RBI NBFC circular lookup if the borrower is an NBFC — big bonus points
+Pro tip: Build a live demo where the judge can type a company name and watch the agents run in real
+time — news agent fetching articles, MCA agent checking filings, then the CAM downloading as a Word
+file. The visual drama of a working pipeline wins hackathons more reliably than a perfect model score.
