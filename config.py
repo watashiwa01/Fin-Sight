@@ -22,7 +22,7 @@ for d in [SAMPLE_DATA_DIR, OUTPUT_DIR, DB_DIR, CHROMA_DIR]:
     d.mkdir(parents=True, exist_ok=True)
 
 # --- App Mode ---
-APP_MODE = os.getenv("APP_MODE", "demo").lower()  # "demo" or "live"
+APP_MODE = os.getenv("APP_MODE", "live").lower()  # "demo" or "live"
 IS_DEMO = APP_MODE == "demo"
 
 # --- API Keys ---
