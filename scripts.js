@@ -7,6 +7,8 @@ const API_BASE = (() => {
     return `${origin}/api`;
 })();
 
+let appConfig = null;
+
 let state = {
     company_data: null,
     pipeline_step: 0,
@@ -28,6 +30,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     updateUI();
     const config = await apiGet("/config");
     if (config) {
+        appConfig = config;
         const badge = document.getElementById("mode-badge");
         badge.innerText = config.is_demo ? "Demo Mode" : "Live Mode";
         badge.className = `badge mode-badge ${config.is_demo ? 'mode-demo' : 'mode-live'}`;
@@ -165,6 +168,71 @@ function formatBytes(bytes) {
     return `${bytes} B`;
 }
 
+async function apiPostRaw(endpoint, data = {}) {
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+            const contentType = response.headers.get("content-type") || "";
+            if (contentType.includes("application/json")) {
+                const error = await response.json();
+                errorMessage = error.detail || JSON.stringify(error);
+            } else {
+                const text = await response.text();
+                if (text) errorMessage = text;
+            }
+        } catch (parseErr) {
+            // ignore
+        }
+        throw new Error(errorMessage);
+    }
+
+    return await response.json();
+}
+
+async function uploadViaStorage(file) {
+    if (!appConfig || !appConfig.has_storage) {
+        throw new Error("Large uploads require configured object storage (S3/R2).");
+    }
+
+    const maxMb = Number(appConfig.storage_max_upload_mb || 50);
+    const maxBytes = Math.floor(maxMb * 1024 * 1024);
+    if (file.size > maxBytes) {
+        throw new Error(`File too large (${formatBytes(file.size)}). Max allowed is ~${formatBytes(maxBytes)}.`);
+    }
+
+    showLoading(`Preparing secure upload for ${file.name}...`);
+    const presign = await apiPostRaw("/storage/presign", {
+        filename: file.name,
+        content_type: file.type || "application/octet-stream",
+    });
+
+    showLoading(`Uploading ${file.name} to storage...`);
+    const formData = new FormData();
+    Object.entries(presign.fields || {}).forEach(([k, v]) => formData.append(k, v));
+    formData.append("file", file);
+
+    const uploadResp = await fetch(presign.url, { method: "POST", body: formData });
+    if (!uploadResp.ok) {
+        let detail = `HTTP ${uploadResp.status}`;
+        try {
+            const text = await uploadResp.text();
+            if (text) detail = text;
+        } catch (e) {
+            // ignore
+        }
+        throw new Error(`Storage upload failed (${detail}). Check bucket CORS settings.`);
+    }
+
+    showLoading(`Processing ${file.name}...`);
+    return await apiPostRaw("/storage/process", { key: presign.key, filename: file.name });
+}
+
 // --- Form Handlers ---
 function initForms() {
     // Onboarding Form
@@ -215,53 +283,50 @@ function initForms() {
         fileInput.addEventListener("change", async (e) => {
             const files = e.target.files;
             for (let file of files) {
-                // Vercel serverless functions reject large payloads (413 FUNCTION_PAYLOAD_TOO_LARGE).
-                // Keep this slightly under the common limit so users get a clear message before upload.
-                const MAX_UPLOAD_BYTES = Math.floor(4.5 * 1024 * 1024);
-                if (file.size > MAX_UPLOAD_BYTES) {
-                    alert(
-                        `File too large for the hosted demo (${formatBytes(file.size)}). ` +
-                        `Max is about ${formatBytes(MAX_UPLOAD_BYTES)} on Vercel.\n\n` +
-                        `Try: compress the PDF, upload a smaller file, or run the backend locally for large documents.`
-                    );
-                    continue;
-                }
-
-                const formData = new FormData();
-                formData.append("file", file);
-                
-                showLoading(`Uploading & Processing ${file.name}...`);
                 try {
-                    const response = await fetch(`${API_BASE}/upload`, {
-                        method: "POST",
-                        body: formData
-                    });
-                    
-                    if (!response.ok) {
-                        let errorMessage = `HTTP ${response.status}`;
-                        try {
-                            const contentType = response.headers.get("content-type") || "";
-                            if (contentType.includes("application/json")) {
-                                const error = await response.json();
-                                errorMessage = error.detail || JSON.stringify(error);
-                            } else {
-                                const text = await response.text();
-                                if (text) errorMessage = text;
+                    // Vercel serverless functions reject request bodies > 4.5MB (413 FUNCTION_PAYLOAD_TOO_LARGE).
+                    const DIRECT_UPLOAD_MAX_BYTES = Math.floor(4.5 * 1024 * 1024);
+
+                    let result = null;
+                    if (file.size > DIRECT_UPLOAD_MAX_BYTES) {
+                        result = await uploadViaStorage(file);
+                    } else {
+                        const formData = new FormData();
+                        formData.append("file", file);
+
+                        showLoading(`Uploading & Processing ${file.name}...`);
+                        const response = await fetch(`${API_BASE}/upload`, {
+                            method: "POST",
+                            body: formData
+                        });
+
+                        if (!response.ok) {
+                            let errorMessage = `HTTP ${response.status}`;
+                            try {
+                                const contentType = response.headers.get("content-type") || "";
+                                if (contentType.includes("application/json")) {
+                                    const error = await response.json();
+                                    errorMessage = error.detail || JSON.stringify(error);
+                                } else {
+                                    const text = await response.text();
+                                    if (text) errorMessage = text;
+                                }
+                            } catch (parseErr) {
+                                // ignore
                             }
-                        } catch (parseErr) {
-                            // ignore
+
+                            if (response.status === 413) {
+                                errorMessage = `File too large for hosted upload. Try again with storage upload enabled or run locally.`;
+                            }
+
+                            alert(`Error processing ${file.name}: ${errorMessage}`);
+                            continue;
                         }
 
-                        if (response.status === 413) {
-                            errorMessage = `File too large for the hosted demo (Vercel limit).`;
-                        }
-
-                        alert(`Error processing ${file.name}: ${errorMessage}`);
-                        continue;
+                        result = await response.json();
                     }
-                    
-                    const result = await response.json();
-                    addFileToResults(result);
+
+                    if (result) addFileToResults(result);
                 } catch (err) {
                     console.error("Upload error:", err);
                     alert(`Failed to upload ${file.name}: ${err?.message || "Network error"}`);

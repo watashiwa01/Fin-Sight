@@ -23,3 +23,20 @@ AI-powered credit appraisal engine with a FastAPI backend serving a simple stati
 ## Notes
 
 - PDF generation uses `fpdf2`. If it isn't installed, the API still starts and `/api/generate-report` returns `pdf_path: null`.
+
+## Large uploads (Vercel)
+
+Vercel serverless functions reject request bodies larger than ~4.5MB. To support bigger PDFs on the hosted demo, Fin‑Sight can upload directly to S3-compatible object storage (AWS S3 / Cloudflare R2) using a presigned POST, then the backend processes the file from storage.
+
+### Enable S3/R2 uploads
+
+1. Create a bucket (AWS S3 or Cloudflare R2).
+2. Set these environment variables (see `.env.example`):
+   - `S3_BUCKET`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
+   - optional: `S3_ENDPOINT_URL` (needed for R2), `S3_REGION` (R2 uses `auto`)
+   - optional: `S3_UPLOAD_MAX_MB`, `S3_PREFIX`, `S3_DELETE_AFTER_PROCESS`
+3. Configure bucket CORS to allow browser uploads from your deployed origin:
+   - Methods: `POST`, `GET`, `HEAD`
+   - Headers: `*`
+   - Origins: your Vercel domain (and custom domain if any)
+4. Redeploy.

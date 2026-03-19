@@ -70,6 +70,15 @@ OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
 TESSERACT_PATH = os.getenv("TESSERACT_PATH", "")
 
+# --- Object Storage (S3 / Cloudflare R2 / etc.) ---
+S3_BUCKET = os.getenv("S3_BUCKET", "")
+S3_PREFIX = os.getenv("S3_PREFIX", "uploads")
+S3_REGION = os.getenv("S3_REGION", "auto")
+S3_ENDPOINT_URL = os.getenv("S3_ENDPOINT_URL", "")
+S3_ADDRESSING_STYLE = os.getenv("S3_ADDRESSING_STYLE", "auto")  # auto|virtual|path
+S3_UPLOAD_MAX_MB = float(os.getenv("S3_UPLOAD_MAX_MB", "50"))
+S3_DELETE_AFTER_PROCESS = os.getenv("S3_DELETE_AFTER_PROCESS", "false").strip().lower() in {"1", "true", "yes"}
+
 # --- Azure Document Intelligence ---
 AZURE_DI_ENDPOINT = os.getenv("AZURE_DI_ENDPOINT", "")
 AZURE_DI_KEY = os.getenv("AZURE_DI_KEY", "")
@@ -127,6 +136,16 @@ def has_anthropic_key() -> bool:
 
 def has_openrouter_key() -> bool:
     return bool(OPENROUTER_API_KEY) and OPENROUTER_API_KEY != "your_openrouter_api_key_here"
+
+def has_s3_storage() -> bool:
+    """
+    Check if S3-compatible object storage is configured.
+
+    Requires bucket + access keys. Endpoint is optional (AWS default if omitted).
+    """
+    access_key = os.getenv("AWS_ACCESS_KEY_ID", "")
+    secret_key = os.getenv("AWS_SECRET_ACCESS_KEY", "")
+    return bool(S3_BUCKET) and bool(access_key) and bool(secret_key)
 
 
 def has_llm_key() -> bool:

@@ -14,7 +14,14 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent))
 
 from config import (
-    IS_DEMO, SAMPLE_DATA_DIR, OUTPUT_DIR, TEMP_UPLOAD_DIR, get_mode_display
+    IS_DEMO,
+    SAMPLE_DATA_DIR,
+    OUTPUT_DIR,
+    TEMP_UPLOAD_DIR,
+    S3_DELETE_AFTER_PROCESS,
+    S3_UPLOAD_MAX_MB,
+    get_mode_display,
+    has_s3_storage,
 )
 from utils import load_json, format_inr
 from pillar1_ingestor.ocr_engine import extract_text_from_uploaded_file
@@ -55,6 +62,51 @@ session_state = {
     "swot_analysis": None,
 }
 
+def _process_document_from_path(file_path: Path, filename: str) -> dict:
+    class MockFile:
+        def __init__(self, path: Path, name: str):
+            self.path = str(path)
+            self.name = name
+            self.size = os.path.getsize(path)
+
+        def read(self):
+            with open(self.path, "rb") as f:
+                return f.read()
+
+        def seek(self, offset, whence=0):
+            pass
+
+    mock_file = MockFile(file_path, filename)
+
+    # We wrap the result to handle large files
+    result = extract_text_from_uploaded_file(mock_file)
+
+    # Optimization for huge documents (Annual Reports)
+    if result.get("num_pages", 0) > 20:
+        result["pages"] = result["pages"][:20]
+        result["full_text"] = "\n\n".join([p["text"] for p in result["pages"]])
+        result["num_pages"] = 20
+        result["note"] = "Processing limited to first 20 pages for speed."
+
+    classification = classify_document(filename, result.get("full_text", ""))
+
+    # Persist to session state
+    session_state["doc_classifications"].append({
+        "filename": filename,
+        "type": classification,
+        "pages": result.get("num_pages", 0)
+    })
+
+    session_state["pipeline_step"] = max(session_state["pipeline_step"], 1)
+
+    return {
+        "filename": filename,
+        "result": result,
+        "classification": classification,
+        "step": 1,
+        "session": session_state
+    }
+
 class OnboardingData(BaseModel):
     company_name: str
     cin: str
@@ -82,8 +134,71 @@ async def get_config():
         "mode_display": get_mode_display(),
         "is_demo": IS_DEMO,
         "has_llm": has_llm_key(),
-        "has_search": has_tavily_key()
+        "has_search": has_tavily_key(),
+        "has_storage": has_s3_storage(),
+        "storage_max_upload_mb": S3_UPLOAD_MAX_MB,
     }
+
+class PresignRequest(BaseModel):
+    filename: str
+    content_type: Optional[str] = None
+
+
+@app.post("/api/storage/presign")
+async def storage_presign(req: PresignRequest):
+    if not has_s3_storage():
+        raise HTTPException(status_code=400, detail="Object storage not configured")
+
+    try:
+        from utils.s3_storage import create_presigned_post
+
+        post = create_presigned_post(req.filename, content_type=req.content_type)
+        return {
+            "key": post.key,
+            "url": post.url,
+            "fields": post.fields,
+            "expires_in": post.expires_in,
+            "max_bytes": post.max_bytes,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create upload URL: {e}")
+
+
+class StorageProcessRequest(BaseModel):
+    key: str
+    filename: str
+
+
+@app.post("/api/storage/process")
+async def storage_process(req: StorageProcessRequest):
+    if not has_s3_storage():
+        raise HTTPException(status_code=400, detail="Object storage not configured")
+
+    try:
+        from utils.s3_storage import download_object_to_path, delete_object
+
+        dest_name = Path(req.key).name or Path(req.filename).name
+        file_path = TEMP_UPLOAD_DIR / dest_name
+        download_object_to_path(req.key, file_path)
+
+        result = _process_document_from_path(file_path, Path(req.filename).name)
+
+        try:
+            file_path.unlink(missing_ok=True)
+        except Exception:
+            pass
+
+        if S3_DELETE_AFTER_PROCESS:
+            try:
+                delete_object(req.key)
+            except Exception:
+                pass
+
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to process uploaded file: {e}")
 
 @app.post("/api/onboarding")
 async def onboarding(data: OnboardingData):
@@ -126,60 +241,17 @@ async def load_sample():
 async def upload_document(file: UploadFile = File(...)):
     # Save file temporarily
     temp_dir = TEMP_UPLOAD_DIR
-    file_path = temp_dir / file.filename
+    safe_name = Path(file.filename).name
+    file_path = temp_dir / safe_name
     with open(file_path, "wb") as buffer:
         buffer.write(await file.read())
     
     # Text extraction & Classification
-    with open(file_path, "rb") as f:
-        class MockFile:
-            def __init__(self, path, name):
-                self.path = path
-                self.name = name
-                self.size = os.path.getsize(path)
-            def read(self):
-                with open(self.path, "rb") as f:
-                    return f.read()
-            def seek(self, offset, whence=0):
-                pass
-                    
-        mock_file = MockFile(file_path, file.filename)
-        
-        try:
-            # We wrap the result to handle large files
-            result = extract_text_from_uploaded_file(mock_file)
-            
-            # Optimization for huge documents (Annual Reports)
-            if result.get("num_pages", 0) > 20:
-                result["pages"] = result["pages"][:20]
-                result["full_text"] = "\n\n".join([p["text"] for p in result["pages"]])
-                result["num_pages"] = 20
-                result["note"] = "Processing limited to first 20 pages for speed."
-
-            classification = classify_document(file.filename, result["full_text"])
-            
-            # Persist to session state
-            session_state["doc_classifications"].append({
-                "filename": file.filename,
-                "type": classification,
-                "pages": result["num_pages"]
-            })
-            
-            # If we don't have company data yet, try to infer it?
-            # (No, onboarding should have done it, but let's be safe)
-            
-            session_state["pipeline_step"] = max(session_state["pipeline_step"], 1)
-
-            return {
-                "filename": file.filename,
-                "result": result,
-                "classification": classification,
-                "step": 1,
-                "session": session_state
-            }
-        except Exception as e:
-            print(f"Extraction error: {e}")
-            raise HTTPException(status_code=500, detail=str(e))
+    try:
+        return _process_document_from_path(file_path, safe_name)
+    except Exception as e:
+        print(f"Extraction error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/extract")
 async def run_extraction(req: ExtractionRequest):

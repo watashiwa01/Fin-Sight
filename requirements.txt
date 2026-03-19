@@ -26,3 +26,5 @@ fpdf2>=2.7.0
 # Optional web search (only used if key present)
 tavily-python>=0.3.0
 
+# Object storage (optional; enables large uploads on Vercel via S3/R2)
+boto3>=1.34.0
