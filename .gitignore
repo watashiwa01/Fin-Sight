@@ -13,3 +13,8 @@ temp_uploads/
 server_log.txt
 test_output.txt
 error_log.txt
+.codex-logs/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
