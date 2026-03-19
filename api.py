@@ -471,6 +471,11 @@ async def add_note(note: str = Form(...)):
 async def get_state():
     return session_state
 
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
 # Serve static files (Frontend)
 app.mount("/", StaticFiles(directory=".", html=True), name="static")
 

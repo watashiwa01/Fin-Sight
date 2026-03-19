@@ -14,6 +14,7 @@ AI-powered credit appraisal engine with a FastAPI backend serving a simple stati
 4. Open:
    - UI: `http://127.0.0.1:8140`
    - API docs: `http://127.0.0.1:8140/docs`
+   - Health check: `http://127.0.0.1:8140/health`
 
 ## Notes
 
