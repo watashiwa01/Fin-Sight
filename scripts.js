@@ -157,6 +157,14 @@ async function apiGet(endpoint) {
     }
 }
 
+function formatBytes(bytes) {
+    const mb = bytes / (1024 * 1024);
+    if (mb >= 1) return `${mb.toFixed(1)} MB`;
+    const kb = bytes / 1024;
+    if (kb >= 1) return `${kb.toFixed(0)} KB`;
+    return `${bytes} B`;
+}
+
 // --- Form Handlers ---
 function initForms() {
     // Onboarding Form
@@ -207,6 +215,18 @@ function initForms() {
         fileInput.addEventListener("change", async (e) => {
             const files = e.target.files;
             for (let file of files) {
+                // Vercel serverless functions reject large payloads (413 FUNCTION_PAYLOAD_TOO_LARGE).
+                // Keep this slightly under the common limit so users get a clear message before upload.
+                const MAX_UPLOAD_BYTES = Math.floor(4.5 * 1024 * 1024);
+                if (file.size > MAX_UPLOAD_BYTES) {
+                    alert(
+                        `File too large for the hosted demo (${formatBytes(file.size)}). ` +
+                        `Max is about ${formatBytes(MAX_UPLOAD_BYTES)} on Vercel.\n\n` +
+                        `Try: compress the PDF, upload a smaller file, or run the backend locally for large documents.`
+                    );
+                    continue;
+                }
+
                 const formData = new FormData();
                 formData.append("file", file);
                 
@@ -218,8 +238,25 @@ function initForms() {
                     });
                     
                     if (!response.ok) {
-                        const error = await response.json();
-                        alert(`Error processing ${file.name}: ${error.detail || "Unknown error"}`);
+                        let errorMessage = `HTTP ${response.status}`;
+                        try {
+                            const contentType = response.headers.get("content-type") || "";
+                            if (contentType.includes("application/json")) {
+                                const error = await response.json();
+                                errorMessage = error.detail || JSON.stringify(error);
+                            } else {
+                                const text = await response.text();
+                                if (text) errorMessage = text;
+                            }
+                        } catch (parseErr) {
+                            // ignore
+                        }
+
+                        if (response.status === 413) {
+                            errorMessage = `File too large for the hosted demo (Vercel limit).`;
+                        }
+
+                        alert(`Error processing ${file.name}: ${errorMessage}`);
                         continue;
                     }
                     
@@ -227,7 +264,7 @@ function initForms() {
                     addFileToResults(result);
                 } catch (err) {
                     console.error("Upload error:", err);
-                    alert(`Failed to upload ${file.name}. Please check the server connection.`);
+                    alert(`Failed to upload ${file.name}: ${err?.message || "Network error"}`);
                 } finally {
                     hideLoading();
                 }
