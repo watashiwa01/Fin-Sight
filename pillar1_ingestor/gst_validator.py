@@ -277,7 +277,10 @@ Write a 3-5 sentence professional GST audit narrative for a Credit Appraisal Mem
 
 def _fallback_narrative(score: float, flags: list) -> str:
     """Rule-based fallback narrative when LLM is unavailable."""
-    if score >= 80:
+    if not flags or (len(flags) == 1 and flags[0]["type"] == "CLEAN"):
+        # Check if we actually have data or if it's just a placeholder high score
+        if score >= 90:
+             return f"GST cross-validation indicates a high compliance score of {score:.0f}/100 based on the provided turnover. However, if no bank statements or GSTR-3B filings were uploaded, this score is based partially on onboarding declarations. Standard monitoring recommended."
         return f"GST cross-validation returned a compliance score of {score:.0f}/100. Declared turnover is broadly consistent with bank credit entries and no significant circular trading patterns were detected. Standard periodic monitoring is recommended."
     elif score >= 60:
         return f"GST cross-validation returned a moderate compliance score of {score:.0f}/100. Minor discrepancies between declared GST turnover and bank credits were noted. The credit team should request a CA-certified GST reconciliation statement before final sanction."

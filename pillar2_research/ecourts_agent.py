@@ -13,32 +13,41 @@ def lookup_litigation(company_name: str, promoter_names: list[str] = None) -> di
     Returns case details and litigation risk score.
     """
     if IS_DEMO or not has_tavily_key():
-        return _get_demo_litigation()
+        return _get_demo_litigation(company_name)
 
     return _search_litigation_live(company_name, promoter_names or [])
 
 
-def _get_demo_litigation() -> dict:
+def _get_demo_litigation(company_name: str = "Bharat Steel Industries") -> dict:
     """Return simulated litigation data."""
     sample = load_json(SAMPLE_DATA_DIR / "sample_company.json")
     lit = sample["litigation_data"]
-
+    
+    cname = company_name if company_name else sample["company_name"]
+    import hashlib
+    seed = int(hashlib.md5(cname.lower().encode()).hexdigest(), 16) % 1000
+    
+    # Randomize case counts
+    total_cases = 5 + (seed % 15)           # 5-19
+    pending_cases = seed % 5                # 0-4
+    disposed_cases = total_cases - pending_cases
+    risk_score = 10 + (seed % 30)           # 10-39
+    
     return {
-        "company_name": sample["company_name"],
-        "total_cases": lit["total_cases"],
-        "pending_cases": lit["pending_cases"],
-        "disposed_cases": lit["disposed_cases"],
-        "cases": lit["cases"],
-        "risk_score": lit["litigation_risk_score"],
-        "risk_level": "LOW" if lit["litigation_risk_score"] < 30 else "MODERATE",
+        "company_name": cname,
+        "total_cases": total_cases,
+        "pending_cases": pending_cases,
+        "disposed_cases": disposed_cases,
+        "cases": lit["cases"][:max(1, total_cases // 4)], 
+        "risk_score": risk_score,
+        "risk_level": "LOW" if risk_score < 30 else "MODERATE",
         "criminal_cases": 0,
-        "civil_cases": 2,
+        "civil_cases": disposed_cases - 1,
         "consumer_cases": 1,
-        "total_exposure_cr": sum(c["amount_cr"] for c in lit["cases"]),
-        "summary": f"Total {lit['total_cases']} cases found: {lit['disposed_cases']} disposed, {lit['pending_cases']} pending. "
-                   f"No criminal cases. 1 pending consumer complaint (Rs 0.12 Cr). "
-                   f"All civil cases resolved. Low litigation risk.",
-        "sources_checked": ["NJDG (njdg.gov.in)", "Pune District Court", "Maharashtra State Consumer Commission"],
+        "total_exposure_cr": 0.5 + (seed % 100) / 10.0,
+        "summary": f"A total of {total_cases} litigation cases were found for {cname}, with {pending_cases} currently pending. "
+                   f"The majority of cases are civil and consumer-related, with a low overall risk profile.",
+        "sources_checked": ["NJDG (njdg.gov.in)", "District Courts", "State Commissions"],
         "method": "demo",
     }
 
@@ -84,7 +93,7 @@ def _search_litigation_live(company_name: str, promoter_names: list[str]) -> dic
         }
 
     except Exception as e:
-        result = _get_demo_litigation()
+        result = _get_demo_litigation(company_name)
         result["method"] = "ecourts_fallback"
         result["error"] = str(e)
         return result

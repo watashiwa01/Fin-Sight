@@ -13,6 +13,7 @@ from pillar2_research.news_agent    import search_company_news
 from pillar2_research.mca_agent     import lookup_mca_data
 from pillar2_research.ecourts_agent import lookup_litigation
 from pillar2_research.sector_agent  import analyze_sector
+from pillar2_research.financial_search_agent import fetch_financial_metrics
 
 
 # ─── State Schema ────────────────────────────────────────────────
@@ -27,6 +28,7 @@ class ResearchState(TypedDict):
     mca_results:       dict
     litigation_results: dict
     sector_results:    dict
+    financial_results: dict
     overall_research:  dict
     errors:            Annotated[list[str], operator.add]  # merges error lists
 
@@ -67,6 +69,13 @@ def _node_sector(state: ResearchState) -> dict:
         return {"sector_results": {}, "errors": [f"sector_agent: {e}"]}
 
 
+def _node_financials(state: ResearchState) -> dict:
+    try:
+        return {"financial_results": fetch_financial_metrics(state["company_name"])}
+    except Exception as e:
+        return {"financial_results": {}, "errors": [f"financial_agent: {e}"]}
+
+
 def _node_supervisor(state: ResearchState) -> dict:
     """Aggregate all agent results into a unified research report."""
     news_risk      = state.get("news_results",      {}).get("risk_score", 50)
@@ -90,6 +99,7 @@ def _node_supervisor(state: ResearchState) -> dict:
         ("mca_results",        "MCA21 Filings"),
         ("litigation_results", "Litigation / NJDG"),
         ("sector_results",     "Sector Analysis"),
+        ("financial_results",  "Financial Search"),
     ]:
         r = state.get(key, {})
         provenance.append({
@@ -108,6 +118,7 @@ def _node_supervisor(state: ResearchState) -> dict:
             "mca":                    state.get("mca_results", {}),
             "litigation":             state.get("litigation_results", {}),
             "sector":                 state.get("sector_results", {}),
+            "financials":             state.get("financial_results", {}),
             "qualitative_notes":      state.get("qualitative_notes", []),
             "provenance":             provenance,
             "errors":                 state.get("errors", []),
@@ -150,6 +161,7 @@ def _build_graph():
         builder.add_node("mca_agent",     _node_mca)
         builder.add_node("ecourts_agent", _node_ecourts)
         builder.add_node("sector_agent",  _node_sector)
+        builder.add_node("financial_agent", _node_financials)
         builder.add_node("supervisor",    _node_supervisor)
 
         # Fan-out from START → all 4 agents (parallel)
@@ -157,12 +169,14 @@ def _build_graph():
         builder.add_edge(START,    "mca_agent")
         builder.add_edge(START,    "ecourts_agent")
         builder.add_edge(START,    "sector_agent")
+        builder.add_edge(START,    "financial_agent")
 
         # Fan-in: all agents → supervisor
         builder.add_edge("news_agent",    "supervisor")
         builder.add_edge("mca_agent",     "supervisor")
         builder.add_edge("ecourts_agent", "supervisor")
         builder.add_edge("sector_agent",  "supervisor")
+        builder.add_edge("financial_agent", "supervisor")
 
         # Supervisor → END
         builder.add_edge("supervisor", END)
@@ -221,6 +235,7 @@ def run_research_pipeline(
         "mca_results":        {},
         "litigation_results": {},
         "sector_results":     {},
+        "financial_results":  {},
         "overall_research":   {},
         "errors":             [],
     }
@@ -234,7 +249,7 @@ def run_research_pipeline(
         try:
             final_state = graph.invoke(initial_state)
             if progress_callback:
-                progress_callback("langgraph", "✅ All agents complete")
+                progress_callback("langgraph", "All agents complete")
             return final_state.get("overall_research", {})
         except Exception as e:
             if progress_callback:
@@ -247,6 +262,7 @@ def run_research_pipeline(
         ("mca_agent",     lambda s: {**s, **_node_mca(s)}),
         ("ecourts_agent", lambda s: {**s, **_node_ecourts(s)}),
         ("sector_agent",  lambda s: {**s, **_node_sector(s)}),
+        ("financial_agent", lambda s: {**s, **_node_financials(s)}),
     ]
     state = initial_state
     for name, fn in agents:
@@ -254,7 +270,7 @@ def run_research_pipeline(
             progress_callback(name, f"Running {name}...")
         state = fn(state)
         if progress_callback:
-            progress_callback(name, "✅ Complete")
+            progress_callback(name, "Complete")
 
     result = _node_supervisor(state)
     state.update(result)

@@ -9,3 +9,7 @@ data/
 output/
 .streamlit/
 *.log
+temp_uploads/
+server_log.txt
+test_output.txt
+error_log.txt

@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fin-Sight | AI Credit Engine</title>
+    <link rel="stylesheet" href="styles.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+
+<body class="dark-theme">
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <span class="logo-emoji">🏦</span>
+                <h2>FinSight</h2>
+                <div id="mode-badge" class="badge mode-badge">Initializing...</div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <ul>
+                    <li class="nav-item active" data-tab="onboarding">
+                        <span class="icon">🏢</span> Entity Onboarding
+                    </li>
+                    <li class="nav-item" data-tab="upload">
+                        <span class="icon">📄</span> Document Upload
+                    </li>
+                    <li class="nav-item" data-tab="research">
+                        <span class="icon">🔍</span> Research Dashboard
+                    </li>
+                    <li class="nav-item" data-tab="analysis">
+                        <span class="icon">📊</span> Credit Analysis
+                    </li>
+                    <li class="nav-item" data-tab="cam">
+                        <span class="icon">📋</span> CAM Report
+                    </li>
+                </ul>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="theme-toggle">
+                    <span id="theme-label">🌙 Dark Mode</span>
+                    <label class="switch">
+                        <input type="checkbox" id="theme-switch" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <div class="pipeline-progress">
+                    <h3>Pipeline Progress</h3>
+                    <ul id="progress-list">
+                        <li class="todo" id="step-0">Load Data</li>
+                        <li class="todo" id="step-1">Ingest Docs</li>
+                        <li class="todo" id="step-2">Research</li>
+                        <li class="todo" id="step-3">Score</li>
+                        <li class="todo" id="step-4">CAM</li>
+                    </ul>
+                </div>
+                <button id="reset-btn" class="secondary-btn">🔄 Reset Pipeline</button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <h1>🏦 Fin-Sight</h1>
+                <p>Next-Gen AI-Powered Corporate Credit Appraisal Engine</p>
+            </header>
+
+            <div id="content-area">
+                <!-- Tabs will be rendered here -->
+                <section id="onboarding-tab" class="tab-content active">
+                    <h2>🏢 Entity Onboarding</h2>
+                    <p>Complete the onboarding wizard to define the entity and loan request.</p>
+
+                    <div class="card glass">
+                        <form id="onboarding-form">
+                            <h3>Entity Details</h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Company Name</label>
+                                    <input type="text" id="company_name" placeholder="e.g. Reliance Industries Limited"
+                                        required>
+                                </div>
+                                <div class="form-group">
+                                    <label>CIN</label>
+                                    <input type="text" id="cin" placeholder="L17110MH1973PLC019786" required>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>PAN</label>
+                                    <input type="text" id="pan" placeholder="ABCDE1234F">
+                                </div>
+                                <div class="form-group">
+                                    <label>Sector / Industry</label>
+                                    <select id="industry">
+                                        <option>Manufacturing</option>
+                                        <option>IT Services</option>
+                                        <option>Retail</option>
+                                        <option>Healthcare</option>
+                                        <option>Financials</option>
+                                        <option>Other</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Turnover (in Crores)</label>
+                                    <input type="number" id="turnover_cr" value="100.0" step="1.0">
+                                </div>
+                            </div>
+
+                            <h3>Loan Details</h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Loan Type</label>
+                                    <select id="loan_type">
+                                        <option>Working Capital</option>
+                                        <option>Term Loan</option>
+                                        <option>Bill Discounting</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Amount (in Crores)</label>
+                                    <input type="number" id="amount_cr" value="10.0" step="0.5">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Tenure (Years)</label>
+                                    <input type="number" id="tenor" value="3.0" step="1.0">
+                                </div>
+                                <div class="form-group">
+                                    <label>Interest Rate (%)</label>
+                                    <input type="number" id="rate" value="12.0" step="0.1">
+                                </div>
+                            </div>
+
+                            <div class="form-actions">
+                                <button type="submit" class="primary-btn">Save & Continue</button>
+                                <button type="button" id="load-sample-btn" class="accent-btn">📦 Load Sample
+                                    (Demo)</button>
+                            </div>
+                        </form>
+                    </div>
+                </section>
+
+                <section id="upload-tab" class="tab-content">
+                    <h2>📄 Document Upload & Data Extraction</h2>
+                    <div class="upload-container">
+                        <div class="upload-box card glass">
+                            <input type="file" id="file-input" multiple hidden>
+                            <label for="file-input" class="file-label">
+                                <span class="upload-icon">📤</span>
+                                <p>Click to upload financial documents (PDF)</p>
+                                <small>Annual Reports, Bank Statements, GST Returns</small>
+                            </label>
+                            <div id="file-list" class="file-list"></div>
+                        </div>
+
+                        <div class="company-summary card glass">
+                            <h3>🏢 Company Info</h3>
+                            <div id="active-company-info">
+                                <p class="loading-text">No company data loaded.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="extraction-results" class="extraction-results"></div>
+
+                    <div class="gst-validation card glass">
+                        <h3>🔒 GST Cross-Validation</h3>
+                        <button id="run-gst-btn" class="primary-btn full-width">▶ Run GST Validation</button>
+                        <div id="gst-results-area"></div>
+                    </div>
+                </section>
+
+                <section id="research-tab" class="tab-content">
+                    <h2>🔍 Autonomous Research Dashboard</h2>
+                    <div class="research-controls card glass">
+                        <div class="form-group">
+                            <label>Company Name</label>
+                            <input type="text" id="research_company_name" placeholder="Enter company name...">
+                        </div>
+                        <button id="launch-research-btn" class="primary-btn full-width">🚀 Launch Research
+                            Agents</button>
+                    </div>
+
+                    <div id="agent-status-area" class="agent-grid"></div>
+                    <div id="research-results-area"></div>
+                </section>
+
+                <section id="analysis-tab" class="tab-content">
+                    <h2>📊 Credit Analysis</h2>
+                    <button id="run-scoring-btn" class="primary-btn full-width">⚡ Run Credit Scoring</button>
+                    <div id="scoring-results-area" class="scoring-grid"></div>
+                </section>
+
+                <section id="cam-tab" class="tab-content">
+                    <h2>📋 CAM Report</h2>
+                    <div id="cam-status-area"></div>
+                    <button id="generate-cam-btn" class="primary-btn full-width">📄 Generate CAM Report & SWOT</button>
+                    <div id="cam-preview-area"></div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals / Overlays -->
+    <div id="loading-overlay" class="overlay hidden">
+        <div class="spinner"></div>
+        <p id="loading-message">Processing...</p>
+    </div>
+
+    <script src="scripts.js"></script>
+</body>
+
+</html>

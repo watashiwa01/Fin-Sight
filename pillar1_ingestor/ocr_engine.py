@@ -9,41 +9,41 @@ import io
 from pathlib import Path
 
 
-def extract_text_from_pdf(pdf_path: str | Path = None, pdf_bytes: bytes = None) -> dict:
+def extract_text_from_pdf(pdf_path: str | Path = None, pdf_bytes: bytes = None, max_pages: int = 20) -> dict:
     """
     Extract text from a PDF file using the best available engine.
     Returns: {pages: [{page_num, text, tables}], full_text, num_pages, method}
     """
     if pdf_bytes:
-        return _extract_best(pdf_bytes=pdf_bytes)
+        return _extract_best(pdf_bytes=pdf_bytes, max_pages=max_pages)
     elif pdf_path:
         with open(pdf_path, "rb") as f:
             pdf_bytes = f.read()
-        return _extract_best(pdf_bytes=pdf_bytes, pdf_path=str(pdf_path))
+        return _extract_best(pdf_bytes=pdf_bytes, pdf_path=str(pdf_path), max_pages=max_pages)
     else:
         return {"pages": [], "full_text": "", "num_pages": 0, "method": "none", "error": "No input provided"}
 
 
-def _extract_best(pdf_bytes: bytes, pdf_path: str = None) -> dict:
+def _extract_best(pdf_bytes: bytes, pdf_path: str = None, max_pages: int = 20) -> dict:
     """Try extraction engines in priority order."""
     from config import has_azure_di
 
-    # 1. Try Azure Document Intelligence first (best for Indian scanned PDFs)
+    # 1. Try Azure Document Intelligence first
     if has_azure_di():
-        result = _extract_with_azure_di(pdf_bytes)
+        result = _extract_with_azure_di(pdf_bytes, max_pages=max_pages)
         if result.get("method") != "error":
             return result
 
-    # 2. Try pdfplumber (best for digital PDFs)
-    result = _extract_with_pdfplumber(pdf_bytes=pdf_bytes)
+    # 2. Try pdfplumber
+    result = _extract_with_pdfplumber(pdf_bytes=pdf_bytes, max_pages=max_pages)
     if result.get("method") != "error" and len(result.get("full_text", "").strip()) > 50:
         return result
 
-    # 3. Fallback to Tesseract OCR (for scanned PDFs without Azure DI)
-    return _extract_with_ocr(pdf_bytes=pdf_bytes)
+    # 3. Fallback to Tesseract OCR
+    return _extract_with_ocr(pdf_bytes=pdf_bytes, max_pages=max_pages)
 
 
-def _extract_with_azure_di(pdf_bytes: bytes) -> dict:
+def _extract_with_azure_di(pdf_bytes: bytes, max_pages: int = 20) -> dict:
     """
     Extract text using Azure Document Intelligence (AI Document Intelligence).
     Handles scanned PDFs, mixed-language (Hindi/English), and complex table layouts.
@@ -69,7 +69,10 @@ def _extract_with_azure_di(pdf_bytes: bytes) -> dict:
         pages = []
         full_text_parts = []
 
-        for page in result.pages:
+        # Limit page iteration
+        result_pages = result.pages[:max_pages] if len(result.pages) > max_pages else result.pages
+
+        for page in result_pages:
             page_text = ""
             for line in page.lines:
                 page_text += line.content + "\n"
@@ -117,7 +120,7 @@ def _extract_with_azure_di(pdf_bytes: bytes) -> dict:
                 "error": f"Azure DI failed: {str(e)}"}
 
 
-def _extract_with_pdfplumber(pdf_path: str = None, pdf_bytes: bytes = None) -> dict:
+def _extract_with_pdfplumber(pdf_path: str = None, pdf_bytes: bytes = None, max_pages: int = 20) -> dict:
     """Extract text using pdfplumber (best for digital PDFs)."""
     try:
         import pdfplumber
@@ -128,7 +131,8 @@ def _extract_with_pdfplumber(pdf_path: str = None, pdf_bytes: bytes = None) -> d
         open_args = {"path_or_fp": pdf_path} if pdf_path else {"path_or_fp": io.BytesIO(pdf_bytes)}
 
         with pdfplumber.open(**open_args) as pdf:
-            for i, page in enumerate(pdf.pages):
+            pdf_pages = pdf.pages[:max_pages] if len(pdf.pages) > max_pages else pdf.pages
+            for i, page in enumerate(pdf_pages):
                 page_text = page.extract_text() or ""
                 tables = []
 
@@ -167,7 +171,7 @@ def _extract_with_pdfplumber(pdf_path: str = None, pdf_bytes: bytes = None) -> d
                 "error": str(e)}
 
 
-def _extract_with_ocr(pdf_path: str = None, pdf_bytes: bytes = None) -> dict:
+def _extract_with_ocr(pdf_path: str = None, pdf_bytes: bytes = None, max_pages: int = 20) -> dict:
     """Extract text using pytesseract OCR (fallback for scanned PDFs)."""
     try:
         import pytesseract
@@ -178,9 +182,9 @@ def _extract_with_ocr(pdf_path: str = None, pdf_bytes: bytes = None) -> dict:
             pytesseract.pytesseract.tesseract_cmd = TESSERACT_PATH
 
         if pdf_path:
-            images = convert_from_path(pdf_path, dpi=300)
+            images = convert_from_path(pdf_path, dpi=300, first_page=1, last_page=max_pages)
         elif pdf_bytes:
-            images = convert_from_bytes(pdf_bytes, dpi=300)
+            images = convert_from_bytes(pdf_bytes, dpi=300, first_page=1, last_page=max_pages)
         else:
             return {"pages": [], "full_text": "", "num_pages": 0, "method": "error",
                     "error": "No input for OCR"}

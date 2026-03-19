@@ -6,19 +6,20 @@ from config import get_llm_client, IS_DEMO
 
 def generate_swot_sync(company_data: dict, five_cs: dict, scoring: dict, research: dict) -> str:
     """Generate a SWOT analysis synchronously."""
+    name = company_data.get('company_name', 'the applicant company')
     if IS_DEMO:
         return (
             "**STRENGTHS**\n"
-            "• Strong revenue growth (15% YoY) and solid current ratio (1.8x).\n"
+            f"• Strong revenue growth (15% YoY) and solid current ratio (1.8x) for {name}.\n"
             "• Positive media sentiment; established brand reputation.\n\n"
             "**WEAKNESSES**\n"
             "• High debt-to-equity ratio indicating leveraged capital structure.\n"
             "• Marginal DSCR (~1.1x) suggests tight cash flows for repayment.\n\n"
             "**OPPORTUNITIES**\n"
-            "• Expansion into new geographic markets with recent loan request.\n"
+            f"• Expansion of {name} into new geographic markets with recent loan request.\n"
             "• Favorable industry outlook and regulatory environment.\n\n"
             "**THREATS**\n"
-            "• 2 pending civil litigation cases could impact short-term liquidity.\n"
+            "• Potential civil litigation cases could impact short-term liquidity.\n"
             "• Macro-economic tightening may increase cost of future borrowings."
         )
     
@@ -59,11 +60,6 @@ def generate_swot_sync(company_data: dict, five_cs: dict, scoring: dict, researc
         print(f"Error generating SWOT, using fallback: {e}")
         return (
             "**STRENGTHS**\n"
-            "• Strong revenue growth (15% YoY) and solid current ratio (1.8x).\n"
-            "• Positive media sentiment; established brand reputation.\n\n"
-            "**WEAKNESSES**\n"
-            "• High debt-to-equity ratio indicating leveraged capital structure.\n"
-            "• Marginal DSCR (~1.1x) suggests tight cash flows for repayment.\n\n"
             "**OPPORTUNITIES**\n"
             "• Expansion into new geographic markets with recent loan request.\n"
             "• Favorable industry outlook and regulatory environment.\n\n"

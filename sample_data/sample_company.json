@@ -1,170 +1,118 @@
 {
-  "company_name": "Bharat Steel Industries Pvt Ltd",
-  "cin": "U27100MH2015PTC265432",
-  "incorporation_date": "2015-06-15",
-  "registered_office": "Plot No. 45, MIDC Industrial Area, Pune, Maharashtra 411019",
-  "industry": "Steel Manufacturing",
-  "nic_code": "24105",
+  "company_name": "Reliance Industries Limited",
+  "cin": "L17110MH1973PLC019786",
+  "pan": "AAACR5055K",
+  "incorporation_date": "1973-05-08",
+  "registered_office": "Makers Chambers IV, 3rd Floor, 222, Nariman Point, Mumbai, Maharashtra 400021",
+  "industry": "Diversified Conglomerate",
+  "nic_code": "06101",
   "promoters": [
-    {"name": "Rajesh Kumar Agarwal", "din": "07823456", "designation": "Managing Director", "shareholding_pct": 45.0},
-    {"name": "Sunita Agarwal", "din": "07823457", "designation": "Director", "shareholding_pct": 30.0}
+    {"name": "Mukesh Dhirubhai Ambani", "din": "00001695", "designation": "Chairman & Managing Director", "shareholding_pct": 50.39}
   ],
   "loan_request": {
     "type": "Term Loan",
-    "amount_cr": 5.0,
-    "purpose": "Capacity expansion — new rolling mill unit",
-    "tenor_years": 3,
-    "proposed_rate_pct": 11.5
+    "amount_cr": 1500.0,
+    "purpose": "Decarbonization Initiative - New Energy Hydrogen Giga Factory",
+    "tenor_years": 7,
+    "proposed_rate_pct": 8.75
   },
   "financials": {
     "fy_2024": {
-      "revenue_cr": 28.5,
-      "ebitda_cr": 4.2,
-      "ebitda_margin_pct": 14.7,
-      "pat_cr": 2.1,
-      "total_debt_cr": 8.5,
-      "net_worth_cr": 12.3,
-      "total_assets_cr": 25.8,
-      "current_ratio": 1.45,
-      "dscr": 1.32,
-      "icr": 2.8,
-      "de_ratio": 0.69,
-      "tangible_net_worth_cr": 11.8,
-      "promoter_equity_pct": 75.0,
-      "operating_cash_flow_cr": 3.5
+      "revenue_cr": 1000122.0,
+      "ebitda_cr": 178677.0,
+      "ebitda_margin_pct": 17.86,
+      "pat_cr": 79020.0,
+      "total_debt_cr": 324622.0,
+      "net_worth_cr": 742922.0,
+      "total_assets_cr": 1812320.0,
+      "current_ratio": 1.15,
+      "dscr": 2.45,
+      "icr": 6.8,
+      "de_ratio": 0.44,
+      "tangible_net_worth_cr": 712000.0,
+      "promoter_equity_pct": 50.39,
+      "operating_cash_flow_cr": 145000.0
     },
     "fy_2023": {
-      "revenue_cr": 24.2,
-      "ebitda_cr": 3.5,
-      "ebitda_margin_pct": 14.5,
-      "pat_cr": 1.6,
-      "total_debt_cr": 9.2,
-      "net_worth_cr": 10.2,
-      "total_assets_cr": 23.1,
-      "current_ratio": 1.35,
-      "dscr": 1.18,
-      "icr": 2.4,
-      "de_ratio": 0.90,
-      "tangible_net_worth_cr": 9.7,
-      "promoter_equity_pct": 75.0,
-      "operating_cash_flow_cr": 2.8
-    },
-    "fy_2022": {
-      "revenue_cr": 19.8,
-      "ebitda_cr": 2.6,
-      "ebitda_margin_pct": 13.1,
-      "pat_cr": 0.9,
-      "total_debt_cr": 10.1,
-      "net_worth_cr": 8.6,
-      "total_assets_cr": 20.5,
-      "current_ratio": 1.22,
-      "dscr": 1.05,
-      "icr": 1.9,
-      "de_ratio": 1.17,
-      "tangible_net_worth_cr": 8.1,
-      "promoter_equity_pct": 75.0,
-      "operating_cash_flow_cr": 2.0
+      "revenue_cr": 892902.0,
+      "ebitda_cr": 153920.0,
+      "ebitda_margin_pct": 17.24,
+      "pat_cr": 73670.0,
+      "total_debt_cr": 314000.0,
+      "net_worth_cr": 715000.0,
+      "total_assets_cr": 1650000.0,
+      "current_ratio": 1.10,
+      "dscr": 2.10,
+      "icr": 5.9,
+      "de_ratio": 0.46,
+      "tangible_net_worth_cr": 685000.0,
+      "promoter_equity_pct": 50.39,
+      "operating_cash_flow_cr": 132000.0
     }
   },
   "gst_data": {
-    "gstin": "27AABCB1234F1Z5",
-    "gstr_3b_turnover_cr": 27.8,
-    "gstr_2a_purchases_cr": 18.5,
-    "bank_credit_entries_cr": 29.2,
-    "filed_months": 34,
+    "gstin": "27AAACR5055K1Z5",
+    "gstr_3b_turnover_cr": 985400.0,
+    "gstr_2a_purchases_cr": 645200.0,
+    "bank_credit_entries_cr": 1005000.0,
+    "filed_months": 36,
     "total_months": 36,
-    "compliance_score": 94.4,
+    "compliance_score": 99.5,
     "mismatches": [
-      {"month": "2024-03", "gstr3b_cr": 2.8, "bank_cr": 3.1, "variance_pct": 10.7, "flag": "minor_variance"},
-      {"month": "2023-09", "gstr3b_cr": 2.1, "bank_cr": 2.9, "variance_pct": 38.1, "flag": "needs_review"}
+      {"month": "2024-03", "gstr3b_cr": 85000.0, "bank_cr": 86200.0, "variance_pct": 1.4, "flag": "standard"}
     ]
-  },
-  "collateral": {
-    "primary_security": "Hypothecation of plant & machinery (new rolling mill)",
-    "collateral_security": "Equitable mortgage of factory land & building at MIDC Pune",
-    "collateral_value_cr": 8.2,
-    "asset_coverage_ratio": 1.64,
-    "ltv_pct": 61.0,
-    "security_type": "immovable",
-    "encumbrance": "Existing charge in favor of SBI (Rs 4.2 Cr — to be NOC'd)"
   },
   "mca_data": {
     "annual_returns_filed": true,
-    "last_agm_date": "2024-09-30",
-    "charges_registered": 2,
-    "charges_satisfied": 1,
-    "charges_open": 1,
+    "last_agm_date": "2024-08-28",
+    "charges_registered": 142,
+    "charges_satisfied": 138,
+    "charges_open": 4,
+    "charges_detail": [
+      {"charge_holder": "State Bank of India", "amount_cr": 5000.0, "status": "Open", "date": "2022-06-15"},
+      {"charge_holder": "HDFC Bank", "amount_cr": 3500.0, "status": "Satisfied", "date": "2021-03-20"},
+      {"charge_holder": "ICICI Bank", "amount_cr": 2200.0, "status": "Open", "date": "2023-11-10"}
+    ],
     "roc_notices": 0,
     "director_disqualifications": 0,
-    "compliance_score": 88,
-    "charges_detail": [
-      {"charge_id": "CHG-001", "holder": "State Bank of India", "amount_cr": 4.2, "status": "open", "date": "2020-03-15"},
-      {"charge_id": "CHG-002", "holder": "HDFC Bank", "amount_cr": 2.0, "status": "satisfied", "date": "2018-07-20"}
+    "compliance_score": 98
+  },
+  "news_data": {
+    "overall_sentiment": 0.75,
+    "sentiment_label": "Positive",
+    "summary": "Reliance Industries reports record revenue and EBITDA for FY24. Strategic focus on Green Energy and Retail expansion remains a major growth driver.",
+    "articles": [
+      {"title": "Reliance Industries share price: RIL stock hits all-time high on growth outlook", "sentiment": "positive", "sentiment_score": 0.9, "source": "https://economictimes.indiatimes.com/markets/stocks/news/reliance-industries-share-price-ril-stock-hits-all-time-high-on-growth-outlook/articleshow/107238466.cms"},
+      {"title": "Reliance to invest $10 billion in green energy complex in Gujarat", "sentiment": "positive", "sentiment_score": 0.8, "source": "https://www.livemint.com/companies/news/reliance-to-invest-10-billion-in-green-energy-complex-in-gujarat-11704875649420.html"},
+      {"title": "Reliance Industries Ltd (RELI.NS) Company Profile", "sentiment": "neutral", "sentiment_score": 0.1, "source": "https://www.reuters.com/markets/companies/RELI.NS/"}
     ]
   },
   "litigation_data": {
-    "total_cases": 3,
-    "pending_cases": 1,
-    "disposed_cases": 2,
+    "total_cases": 12,
+    "pending_cases": 3,
+    "disposed_cases": 9,
+    "litigation_risk_score": 15,
     "cases": [
-      {"case_type": "civil", "court": "Pune District Court", "status": "disposed", "year": 2021, "description": "Supplier payment dispute — settled out of court", "amount_cr": 0.35},
-      {"case_type": "civil", "court": "Pune District Court", "status": "disposed", "year": 2022, "description": "Land boundary dispute with adjacent plot — disposed in favor", "amount_cr": 0.0},
-      {"case_type": "consumer", "court": "Maharashtra State Consumer Commission", "status": "pending", "year": 2023, "description": "Product quality complaint by downstream buyer", "amount_cr": 0.12}
-    ],
-    "litigation_risk_score": 22
-  },
-  "news_data": {
-    "articles": [
-      {"title": "Bharat Steel wins Rs 10 Cr order from L&T for construction steel", "source": "Economic Times", "date": "2024-08-15", "sentiment": "positive", "score": 0.82},
-      {"title": "Pune steel makers eye capacity expansion amid infrastructure boom", "source": "Business Standard", "date": "2024-06-20", "sentiment": "positive", "score": 0.71},
-      {"title": "Steel prices soften in Q3 as Chinese imports rise", "source": "LiveMint", "date": "2024-10-05", "sentiment": "negative", "score": -0.45},
-      {"title": "MIDC Pune industrial zone sees 15% growth in manufacturing output", "source": "Times of India", "date": "2024-07-12", "sentiment": "positive", "score": 0.55}
-    ],
-    "overall_sentiment": 0.41,
-    "sentiment_label": "mildly_positive"
+      {"case_id": "COM/102/2023", "type": "Consumer", "status": "Pending", "amount_cr": 0.15, "court": "NCDRC"},
+      {"case_id": "TAX/405/2022", "type": "Tax", "status": "Disposed", "amount_cr": 45.0, "court": "ITAT"},
+      {"case_id": "CIV/99/2021", "type": "Civil", "status": "Disposed", "amount_cr": 1.2, "court": "Bombay High Court"}
+    ]
   },
   "sector_data": {
-    "industry": "Steel Manufacturing",
-    "outlook": "positive",
-    "outlook_score": 72,
-    "regulatory_risk": "moderate",
-    "regulatory_risk_score": 35,
+    "industry": "Diversified Conglomerate",
+    "outlook": "Positive",
+    "outlook_score": 85,
+    "regulatory_risk": "Low",
+    "regulatory_risk_score": 20,
     "key_factors": [
-      "Government infrastructure push (PM Gati Shakti) driving steel demand",
-      "Anti-dumping duty on Chinese steel imports provides domestic protection",
-      "Rising coking coal prices may compress margins in FY25",
-      "BIS quality certification mandatory from Apr 2025 — compliance cost"
+      "Government push for Green Hydrogen",
+      "Rising consumer spends in Retail",
+      "Global crude oil price volatility",
+      "Increasing 5G adoption in Telecom"
     ],
     "rbi_circulars": [
-      {"circular": "RBI/2024-25/45", "subject": "Revised guidelines on MSME lending — enhanced priority sector targets", "impact": "positive"}
+      "RBI Master Circular on ECB guidelines 2024",
+      "Revised MSME classification 2023"
     ]
-  },
-  "cibil_data": {
-    "cmr_rank": 4,
-    "cmr_description": "Above Average",
-    "ccr_score": 720,
-    "prior_defaults": 0,
-    "existing_facilities": [
-      {"lender": "State Bank of India", "type": "Working Capital", "limit_cr": 4.0, "outstanding_cr": 3.2, "status": "Standard"},
-      {"lender": "HDFC Bank", "type": "Term Loan", "limit_cr": 2.0, "outstanding_cr": 0.0, "status": "Closed"}
-    ],
-    "dpd_history": "No days past due in last 24 months"
-  },
-  "auditor_remarks": {
-    "auditor_name": "M/s Sharma & Associates, Chartered Accountants",
-    "opinion": "Unmodified (Clean)",
-    "emphasis_of_matter": "None",
-    "related_party_flag": false,
-    "going_concern_flag": false,
-    "key_observations": [
-      "Inventory valuation method consistent with prior year",
-      "No material related party transactions outside ordinary course of business"
-    ]
-  },
-  "qualitative_notes": [
-    "Factory operating at 65% capacity — room for growth with new rolling mill",
-    "Second-generation promoter, father established the business in 1990",
-    "Long-standing relationship with SBI (10+ years)",
-    "Strong dealer network across Maharashtra and Gujarat"
-  ]
+  }
 }

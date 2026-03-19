@@ -11,29 +11,40 @@ def analyze_sector(industry: str, nic_code: str = "") -> dict:
     Analyze industry sector outlook and regulatory environment.
     """
     if IS_DEMO or not has_tavily_key():
-        return _get_demo_sector()
+        return _get_demo_sector(industry)
 
     return _analyze_live(industry, nic_code)
 
 
-def _get_demo_sector() -> dict:
+def _get_demo_sector(industry: str = "Diversified Conglomerate") -> dict:
     """Return simulated sector analysis."""
     sample = load_json(SAMPLE_DATA_DIR / "sample_company.json")
     sector = sample["sector_data"]
+    
+    # Guess industry if empty
+    if not industry:
+        industry = "Diversified Conglomerate"
 
+    import hashlib
+    seed = int(hashlib.md5(industry.lower().encode()).hexdigest(), 16) % 1000
+    
+    # Randomize scores
+    out_score = 60 + (seed % 30)   # 60-89
+    reg_score = 15 + (seed % 40)   # 15-54
+    total_risk = 20 + (seed % 20)  # 20-39
+    
     return {
-        "industry": sector["industry"],
-        "outlook": sector["outlook"],
-        "outlook_score": sector["outlook_score"],
-        "regulatory_risk": sector["regulatory_risk"],
-        "regulatory_risk_score": sector["regulatory_risk_score"],
+        "industry": industry,
+        "outlook": "Positive" if out_score > 75 else "Stable",
+        "outlook_score": out_score,
+        "regulatory_risk": "Low" if reg_score < 30 else "Moderate",
+        "regulatory_risk_score": reg_score,
         "key_factors": sector["key_factors"],
         "rbi_circulars": sector["rbi_circulars"],
-        "risk_score": 28,
-        "summary": "Steel manufacturing sector outlook is positive, driven by government infrastructure push "
-                   "(PM Gati Shakti). Anti-dumping duties protect domestic players. Rising coking coal prices "
-                   "and mandatory BIS certification are moderate headwinds. RBI's revised MSME lending guidelines "
-                   "are favorable for credit access.",
+        "risk_score": total_risk,
+        "summary": f"The outlook for the {industry} sector is {('positive' if out_score > 75 else 'stable')}. "
+                   "Growth is supported by favorable domestic policies. Regulatory risk is "
+                   f"{('low' if reg_score < 30 else 'manageable')}, though monitoring of recent guidelines is advised.",
         "method": "demo",
     }
 

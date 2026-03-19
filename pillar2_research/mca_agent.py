@@ -14,20 +14,32 @@ def lookup_mca_data(company_name: str, cin: str = "") -> dict:
     Returns director info, charges, compliance status.
     """
     if IS_DEMO or not has_tavily_key():
-        return _get_demo_mca()
+        return _get_demo_mca(company_name, cin)
 
     return _search_mca_live(company_name, cin)
 
 
-def _get_demo_mca() -> dict:
+def _get_demo_mca(company_name: str, cin: str) -> dict:
     """Return simulated MCA data."""
+    from utils import load_json
     sample = load_json(SAMPLE_DATA_DIR / "sample_company.json")
     mca = sample["mca_data"]
     promoters = sample["promoters"]
+    cname = company_name if company_name else sample["company_name"]
+    
+    import hashlib
+    seed = int(hashlib.md5(cname.lower().encode()).hexdigest(), 16) % 1000
+    
+    # Randomize numeric metrics based on seed
+    comp_score = 90 + (seed % 10) # 90-99
+    reg_charges = (seed % 50) + 10 # 10-59
+    open_charges = seed % 4        # 0-3
+    sat_charges = reg_charges - open_charges
+    risk_score = 10 + (seed % 15)  # 10-24
 
     return {
-        "company_name": sample["company_name"],
-        "cin": sample["cin"],
+        "company_name": cname,
+        "cin": cin or sample["cin"],
         "incorporation_date": sample["incorporation_date"],
         "registered_office": sample["registered_office"],
         "directors": [
@@ -42,21 +54,21 @@ def _get_demo_mca() -> dict:
             for i, p in enumerate(promoters)
         ],
         "charges": {
-            "total_registered": mca["charges_registered"],
-            "satisfied": mca["charges_satisfied"],
-            "open": mca["charges_open"],
-            "details": mca["charges_detail"],
+            "total_registered": reg_charges,
+            "satisfied": sat_charges,
+            "open": open_charges,
+            "details": mca["charges_detail"][:max(1, open_charges)],
         },
         "compliance": {
             "annual_returns_filed": mca["annual_returns_filed"],
             "last_agm_date": mca["last_agm_date"],
             "roc_notices": mca["roc_notices"],
-            "compliance_score": mca["compliance_score"],
+            "compliance_score": comp_score,
         },
-        "risk_score": 18,  # Low risk
+        "risk_score": risk_score,
         "risk_flags": [],
-        "summary": "Company has clean MCA records. 1 open charge in favor of SBI (working capital). "
-                   "No ROC notices or director disqualifications. Annual returns filed on time.",
+        "summary": f"MCA records for {cname} show {comp_score}% compliance. There are {open_charges} open charges and {sat_charges} satisfied charges recorded. "
+                   "Digital filings are up to date with no pending ROC notices.",
         "method": "demo",
     }
 
@@ -100,7 +112,7 @@ def _search_mca_live(company_name: str, cin: str) -> dict:
         }
 
     except Exception as e:
-        result = _get_demo_mca()
+        result = _get_demo_mca(company_name, cin)
         result["method"] = "mca_fallback"
         result["error"] = str(e)
         return result

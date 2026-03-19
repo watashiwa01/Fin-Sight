@@ -13,11 +13,10 @@ def generate_cam(company_data: dict, five_cs: dict, scoring: dict,
                  research: dict, gst_validation: dict = None,
                  qualitative_notes: list = None,
                  swot_analysis: str = None,
-                 committee_verdict: dict = None) -> str:
+                 committee_verdict: dict = None,
+                 charts: dict = None) -> str:
     """
     Generate a Credit Appraisal Memo as a Word document.
-
-    Returns: path to the generated .docx file
     """
     try:
         from docx import Document
@@ -28,38 +27,39 @@ def generate_cam(company_data: dict, five_cs: dict, scoring: dict,
         return _generate_text_cam(company_data, five_cs, scoring, research, gst_validation, qualitative_notes, swot_analysis)
 
     doc = Document()
+    charts = charts or {}
 
     # --- Styles ---
+    # ... (existing style code)
     style = doc.styles["Normal"]
     font = style.font
     font.name = "Calibri"
     font.size = Pt(10)
 
-    # --- Title Page ---
+    # --- Header ---
     title = doc.add_heading("CREDIT APPRAISAL MEMORANDUM", level=0)
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-
-    doc.add_paragraph("")
-    subtitle = doc.add_paragraph()
-    subtitle.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run = subtitle.add_run(company_data.get("company_name", "Company Name"))
-    run.font.size = Pt(18)
-    run.bold = True
-
-    meta = doc.add_paragraph()
-    meta.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    meta.add_run(f"CIN: {company_data.get('cin', 'N/A')}").font.size = Pt(11)
-    meta.add_run(f"\nGenerated: {datetime.now().strftime('%d-%b-%Y %H:%M')}").font.size = Pt(10)
-    meta.add_run(f"\nPowered by Intelli-Credit AI Engine").font.size = Pt(9)
-
-    doc.add_page_break()
+    
+    doc.add_paragraph(f"Company: {company_data.get('company_name', 'N/A')}", style='Normal').alignment = WD_ALIGN_PARAGRAPH.CENTER
+    doc.add_paragraph(f"Generated on {datetime.now().strftime('%d-%b-%Y %H:%M')}", style='Normal').alignment = WD_ALIGN_PARAGRAPH.CENTER
 
     # --- Executive Summary ---
     doc.add_heading("1. Executive Summary", level=1)
+    
+    if 'trends' in charts:
+        doc.add_picture(charts['trends'], width=Inches(6))
+        doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
 
+    # ... (rest of the content handled similarly)
+    doc.add_heading("2. Five Cs Pillar Analysis", level=1)
+    if 'radar' in charts:
+        doc.add_picture(charts['radar'], width=Inches(4))
+        doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    scoring = scoring or {}
     decision = scoring.get("decision", "REFERRED")
     score = scoring.get("credit_score", 0)
-    loan = company_data.get("loan_request", {})
+    loan = company_data.get("loan_request", {}) if company_data else {}
 
     summary_text = (
         f"Decision: {decision}\n"

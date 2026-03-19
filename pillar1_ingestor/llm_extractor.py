@@ -79,15 +79,18 @@ Document text:
 }
 
 
-def get_demo_extraction(doc_type: str) -> dict:
+def get_demo_extraction(doc_type: str, company_name: str = "Bharat Steel Industries") -> dict:
     """Return sample extraction data for demo mode."""
     from utils import load_json
     sample = load_json(SAMPLE_DATA_DIR / "sample_company.json")
 
+    # Use provided name if Bharat Steel is the default in sample
+    cname = company_name if company_name else sample["company_name"]
+
     if doc_type == "annual_report":
         fy = sample["financials"]["fy_2024"]
         return {
-            "company_name": {"value": sample["company_name"], "source_quote": f"The name of the company is {sample['company_name']}"},
+            "company_name": {"value": cname, "source_quote": f"The name of the company is {cname}"},
             "cin": {"value": sample["cin"], "source_quote": f"Corporate Identity Number: {sample['cin']}"},
             "fiscal_year": "FY 2023-24",
             "revenue_cr": {"value": fy["revenue_cr"], "source_quote": f"Revenue from operations: {fy['revenue_cr']} Cr"},
@@ -106,7 +109,7 @@ def get_demo_extraction(doc_type: str) -> dict:
         }
     elif doc_type == "bank_statement":
         return {
-            "account_holder": sample["company_name"],
+            "account_holder": cname,
             "account_number": "XXXX XXXX 4567",
             "bank_name": "State Bank of India",
             "period": "2023-04-01 to 2024-03-31",
@@ -133,7 +136,7 @@ def get_demo_extraction(doc_type: str) -> dict:
     else:
         return {
             "document_summary": "Document processed successfully in demo mode.",
-            "company_name": sample["company_name"],
+            "company_name": cname,
             "confidence": 0.75,
             "extraction_method": "demo",
         }
@@ -144,8 +147,15 @@ async def extract_with_llm(text: str, doc_type: str, custom_schema: str = None) 
     Extract structured data using the configured LLM (OpenAI or Anthropic/Claude).
     Falls back to demo data if no API key is available.
     """
+    # Try to find company name in text for better demo realism
+    # Try to find company name in text for better demo realism
+    cname = "the applicant company"
+    if text:
+        first_line = text.split('\n')[0][:100]
+        if len(first_line) > 5: cname = first_line.strip()
+
     if IS_DEMO or not has_llm_key():
-        result = get_demo_extraction(doc_type)
+        result = get_demo_extraction(doc_type, company_name=cname)
         return result
 
     try:
