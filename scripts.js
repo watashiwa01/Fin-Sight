@@ -1,6 +1,11 @@
 // Intelli-Credit Frontend Logic
 
-const API_BASE = "http://localhost:8140/api";
+const API_BASE = (() => {
+    const origin = window.location.origin;
+    // If opened as a local file (origin === "null"), fall back to local dev server.
+    if (!origin || origin === "null") return "http://localhost:8140/api";
+    return `${origin}/api`;
+})();
 
 let state = {
     company_data: null,
