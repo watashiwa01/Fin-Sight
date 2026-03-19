@@ -7,10 +7,13 @@ AI-powered credit appraisal engine with a FastAPI backend serving a simple stati
 1. Install deps:
    - `python -m pip install -r requirements.txt`
 2. Configure env (optional but recommended):
-   - copy `.env.example` → `.env`
+   - copy `.env.example` -> `.env`
    - set keys like `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `TAVILY_API_KEY` / `AZURE_DI_ENDPOINT` / `AZURE_DI_KEY`
 3. Start the app:
    - `python api.py`
+   - or PowerShell: `./scripts/run.ps1`
+   - or bash: `./scripts/run.sh`
+   - optional: `PORT` env var (default `8140`)
 4. Open:
    - UI: `http://127.0.0.1:8140`
    - API docs: `http://127.0.0.1:8140/docs`
