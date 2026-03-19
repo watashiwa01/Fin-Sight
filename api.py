@@ -1,7 +1,7 @@
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 import os
 import json
@@ -69,7 +69,7 @@ class OnboardingData(BaseModel):
 class ExtractionRequest(BaseModel):
     filename: str
     doc_type: str
-    schema: str
+    schema_: str = Field(alias="schema")
     full_text: str
 
 class ResearchRequest(BaseModel):
@@ -184,7 +184,7 @@ async def upload_document(file: UploadFile = File(...)):
 
 @app.post("/api/extract")
 async def run_extraction(req: ExtractionRequest):
-    extracted = extract_sync(req.full_text, req.doc_type, custom_schema=req.schema)
+    extracted = extract_sync(req.full_text, req.doc_type, custom_schema=req.schema_)
     # Add metadata for the validator
     extracted["_doc_type"] = req.doc_type
     
