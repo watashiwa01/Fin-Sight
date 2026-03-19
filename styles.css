@@ -184,6 +184,10 @@ body {
     gap: 12px;
 }
 
+.nav-item .label-short {
+    display: none;
+}
+
 .nav-item:hover {
     background: var(--accent-dim);
     color: var(--accent);
@@ -519,4 +523,101 @@ input:focus, select:focus, textarea:focus {
     .sidebar h2, .sidebar-nav span:not(.icon), .theme-toggle span, .pipeline-progress { display: none; }
     .logo-emoji { margin: 0 auto; }
     .nav-item { justify-content: center; padding: 1rem; }
+}
+
+@media (max-width: 640px) {
+    .app-container { flex-direction: column; }
+
+    .sidebar {
+        position: fixed;
+        top: auto;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        height: 76px;
+        padding: 0.5rem 0.75rem;
+        border-right: 0;
+        border-top: 1px solid var(--card-border);
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .sidebar-header,
+    .sidebar-footer {
+        display: none;
+    }
+
+    .sidebar-nav {
+        width: 100%;
+    }
+
+    .sidebar-nav ul {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.25rem;
+    }
+
+    .nav-item {
+        flex: 1;
+        margin-bottom: 0;
+        padding: 0.4rem 0.3rem;
+        flex-direction: column;
+        justify-content: center;
+        gap: 0.25rem;
+        font-size: 0.7rem;
+        text-align: center;
+        min-width: 0;
+    }
+
+    .nav-item .label-full {
+        display: none !important;
+    }
+
+    .nav-item .label-short {
+        display: block !important;
+        width: 100%;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .main-content {
+        margin-left: 0;
+        width: 100%;
+        max-width: 100%;
+        padding: 1rem;
+        padding-bottom: 110px; /* space for bottom nav */
+    }
+
+    .main-header {
+        padding: 1.5rem 1.25rem;
+    }
+
+    .main-header h1 {
+        font-size: 2rem;
+    }
+
+    .card {
+        padding: 1.25rem;
+    }
+
+    .form-row {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .upload-container {
+        grid-template-columns: 1fr;
+    }
+
+    .file-item {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    img, canvas, svg {
+        max-width: 100%;
+        height: auto;
+    }
 }
