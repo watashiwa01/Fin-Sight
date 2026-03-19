@@ -3,6 +3,7 @@ Intelli-Credit Configuration Manager
 Handles environment variables, mode detection, and path constants.
 """
 import os
+import tempfile
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -12,13 +13,50 @@ load_dotenv()
 # --- Paths ---
 BASE_DIR = Path(__file__).parent
 SAMPLE_DATA_DIR = BASE_DIR / "sample_data"
-OUTPUT_DIR = BASE_DIR / "output"
-DB_DIR = BASE_DIR / "data"
+
+
+def _pick_runtime_dir() -> Path:
+    """
+    Pick a writable runtime directory for generated artifacts and caches.
+
+    Serverless platforms (e.g. Vercel) often mount the project directory as read-only.
+    In that case we fall back to a temp directory.
+    """
+    override = os.getenv("FIN_SIGHT_RUNTIME_DIR") or os.getenv("RUNTIME_DIR") or ""
+
+    candidates: list[Path] = []
+    if override:
+        candidates.append(Path(override))
+
+    candidates.extend([
+        BASE_DIR,
+        Path(tempfile.gettempdir()) / "fin-sight",
+    ])
+
+    for candidate in candidates:
+        try:
+            candidate.mkdir(parents=True, exist_ok=True)
+            test_path = candidate / ".write_test"
+            test_path.write_text("ok", encoding="utf-8")
+            test_path.unlink(missing_ok=True)
+            return candidate
+        except Exception:
+            continue
+
+    fallback = Path(tempfile.gettempdir()) / "fin-sight"
+    fallback.mkdir(parents=True, exist_ok=True)
+    return fallback
+
+
+RUNTIME_DIR = _pick_runtime_dir()
+OUTPUT_DIR = RUNTIME_DIR / "output"
+DB_DIR = RUNTIME_DIR / "data"
 CHROMA_DIR = DB_DIR / "chromadb"
+TEMP_UPLOAD_DIR = RUNTIME_DIR / "temp_uploads"
 SQLITE_PATH = DB_DIR / "intelli_credit.db"
 
-# Ensure directories exist
-for d in [SAMPLE_DATA_DIR, OUTPUT_DIR, DB_DIR, CHROMA_DIR]:
+# Ensure writable directories exist
+for d in [OUTPUT_DIR, DB_DIR, CHROMA_DIR, TEMP_UPLOAD_DIR]:
     d.mkdir(parents=True, exist_ok=True)
 
 # --- App Mode ---

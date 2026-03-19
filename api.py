@@ -14,7 +14,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent))
 
 from config import (
-    IS_DEMO, SAMPLE_DATA_DIR, OUTPUT_DIR, get_mode_display
+    IS_DEMO, SAMPLE_DATA_DIR, OUTPUT_DIR, TEMP_UPLOAD_DIR, get_mode_display
 )
 from utils import load_json, format_inr
 from pillar1_ingestor.ocr_engine import extract_text_from_uploaded_file
@@ -125,8 +125,7 @@ async def load_sample():
 @app.post("/api/upload")
 async def upload_document(file: UploadFile = File(...)):
     # Save file temporarily
-    temp_dir = Path("temp_uploads")
-    temp_dir.mkdir(exist_ok=True)
+    temp_dir = TEMP_UPLOAD_DIR
     file_path = temp_dir / file.filename
     with open(file_path, "wb") as buffer:
         buffer.write(await file.read())
@@ -358,8 +357,8 @@ from fastapi.responses import FileResponse
 
 @app.get("/api/download/{filename}")
 async def download_file(filename: str):
-    file_path = os.path.join("output", filename)
-    if not os.path.exists(file_path):
+    file_path = OUTPUT_DIR / filename
+    if not file_path.exists():
         raise HTTPException(status_code=404, detail="File not found")
     
     # Dynamic MIME type based on extension
@@ -373,7 +372,7 @@ async def download_file(filename: str):
         mime_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         
     return FileResponse(
-        file_path, 
+        str(file_path),
         media_type=mime_type,
         filename=filename
     )
@@ -389,11 +388,11 @@ except ModuleNotFoundError as e:
 
 @app.get("/api/download-pdf/{filename}")
 async def download_pdf(filename: str):
-    file_path = os.path.join("output", filename)
-    if not os.path.exists(file_path):
+    file_path = OUTPUT_DIR / filename
+    if not file_path.exists():
         raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(
-        file_path, 
+        str(file_path),
         media_type='application/pdf',
         filename=filename
     )
@@ -457,8 +456,10 @@ async def generate_report():
     except Exception as e:
         import traceback
         err_msg = traceback.format_exc()
-        with open("error_log.txt", "w") as f:
-            f.write(err_msg)
+        try:
+            (OUTPUT_DIR / "error_log.txt").write_text(err_msg, encoding="utf-8")
+        except Exception:
+            pass
         print(f"REPORT ERROR: {err_msg}")
         raise HTTPException(status_code=500, detail=str(e))
 
