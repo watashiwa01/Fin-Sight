@@ -20,6 +20,16 @@ AI-powered credit appraisal engine with a FastAPI backend serving a simple stati
    - API docs: `http://127.0.0.1:8140/docs`
    - Health check: `http://127.0.0.1:8140/health`
 
+## Deploy on Render
+
+This avoids Vercel's ~4.5MB serverless upload limit (so PDF uploads can work without S3/R2).
+
+1. Go to Render → **New** → **Blueprint** and connect this GitHub repo.
+2. Render should detect `render.yaml` automatically. Create the service.
+3. After deploy, open:
+   - UI: `https://<your-render-domain>/`
+   - Health: `https://<your-render-domain>/health`
+
 ## Notes
 
 - PDF generation uses `fpdf2`. If it isn't installed, the API still starts and `/api/generate-report` returns `pdf_path: null`.
