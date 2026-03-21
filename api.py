@@ -88,13 +88,20 @@ def _process_document_from_path(file_path: Path, filename: str) -> dict:
         result["num_pages"] = 20
         result["note"] = "Processing limited to first 20 pages for speed."
 
-    classification = classify_document(filename, result.get("full_text", ""))
+    classification_meta = classify_document(filename, result.get("full_text", ""))
+    doc_type = (
+        classification_meta.get("type")
+        if isinstance(classification_meta, dict)
+        else str(classification_meta or "other")
+    )
 
     # Persist to session state
     session_state["doc_classifications"].append({
         "filename": filename,
-        "type": classification,
-        "pages": result.get("num_pages", 0)
+        "type": doc_type,
+        "confidence": classification_meta.get("confidence") if isinstance(classification_meta, dict) else None,
+        "method": classification_meta.get("method") if isinstance(classification_meta, dict) else None,
+        "pages": result.get("num_pages", 0),
     })
 
     session_state["pipeline_step"] = max(session_state["pipeline_step"], 1)
@@ -102,7 +109,8 @@ def _process_document_from_path(file_path: Path, filename: str) -> dict:
     return {
         "filename": filename,
         "result": result,
-        "classification": classification,
+        "classification": doc_type,
+        "classification_meta": classification_meta,
         "step": 1,
         "session": session_state
     }
@@ -121,7 +129,7 @@ class OnboardingData(BaseModel):
 class ExtractionRequest(BaseModel):
     filename: str
     doc_type: str
-    schema_: str = Field(alias="schema")
+    schema_: str = Field(default="", alias="schema")
     full_text: str
 
 class ResearchRequest(BaseModel):
@@ -252,10 +260,58 @@ async def upload_document(file: UploadFile = File(...)):
     except Exception as e:
         print(f"Extraction error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        try:
+            file_path.unlink(missing_ok=True)
+        except Exception:
+            pass
 
 @app.post("/api/extract")
 async def run_extraction(req: ExtractionRequest):
-    extracted = extract_sync(req.full_text, req.doc_type, custom_schema=req.schema_)
+    custom_schema = None
+    schema_name = (req.schema_ or "").strip()
+    schema_key = schema_name.lower()
+
+    if schema_key and schema_key not in {"general", "default", "{}", "null"}:
+        if schema_key in {"financials", "annual", "annual_report"}:
+            custom_schema = json.dumps(
+                {
+                    "company_name": {"value": None, "source_quote": None},
+                    "cin": {"value": None, "source_quote": None},
+                    "fiscal_year": None,
+                    "revenue_cr": {"value": None, "source_quote": None},
+                    "ebitda_cr": {"value": None, "source_quote": None},
+                    "ebitda_margin_pct": None,
+                    "pat_cr": {"value": None, "source_quote": None},
+                    "total_debt_cr": {"value": None, "source_quote": None},
+                    "net_worth_cr": {"value": None, "source_quote": None},
+                    "current_ratio": None,
+                    "de_ratio": None,
+                    "directors": [{"name": None, "din": None, "designation": None}],
+                    "auditor_name": None,
+                    "auditor_opinion": None,
+                    "key_observations": [],
+                    "confidence_score": None,
+                },
+                indent=2,
+            )
+        elif schema_key in {"gst", "gst_return"}:
+            custom_schema = json.dumps(
+                {
+                    "gstin": {"value": None, "source_quote": None},
+                    "return_type": None,
+                    "period": None,
+                    "taxable_turnover": {"value": None, "source_quote": None},
+                    "total_tax_paid": None,
+                    "itc_claimed": None,
+                    "confidence_score": None,
+                },
+                indent=2,
+            )
+        elif schema_name.lstrip().startswith(("{", "[")):
+            custom_schema = schema_name
+
+    extracted = extract_sync(req.full_text, req.doc_type, custom_schema=custom_schema)
     # Add metadata for the validator
     extracted["_doc_type"] = req.doc_type
     

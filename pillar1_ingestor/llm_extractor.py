@@ -89,6 +89,7 @@ def get_demo_extraction(doc_type: str, company_name: str = "Bharat Steel Industr
 
     if doc_type == "annual_report":
         fy = sample["financials"]["fy_2024"]
+        auditor = sample.get("auditor_remarks") or {}
         return {
             "company_name": {"value": cname, "source_quote": f"The name of the company is {cname}"},
             "cin": {"value": sample["cin"], "source_quote": f"Corporate Identity Number: {sample['cin']}"},
@@ -102,9 +103,9 @@ def get_demo_extraction(doc_type: str, company_name: str = "Bharat Steel Industr
             "current_ratio": fy["current_ratio"],
             "de_ratio": fy["de_ratio"],
             "directors": sample["promoters"],
-            "auditor_name": sample["auditor_remarks"]["auditor_name"],
-            "auditor_opinion": sample["auditor_remarks"]["opinion"],
-            "key_observations": sample["auditor_remarks"]["key_observations"],
+            "auditor_name": auditor.get("auditor_name", "N/A"),
+            "auditor_opinion": auditor.get("opinion", "N/A"),
+            "key_observations": auditor.get("key_observations", []),
             "confidence_score": 0.98,
         }
     elif doc_type == "bank_statement":
