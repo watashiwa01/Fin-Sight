@@ -118,7 +118,6 @@ def _process_document_from_path(file_path: Path, filename: str) -> dict:
 class OnboardingData(BaseModel):
     company_name: str
     cin: str
-    pan: Optional[str] = ""
     industry: str
     turnover_cr: float
     loan_type: str
@@ -213,7 +212,6 @@ async def onboarding(data: OnboardingData):
     session_state["company_data"] = {
         "company_name": data.company_name,
         "cin": data.cin,
-        "pan": data.pan,
         "industry": data.industry,
         "turnover_cr": data.turnover_cr,
         "loan_request": {
@@ -234,9 +232,6 @@ async def onboarding(data: OnboardingData):
 async def load_sample():
     # Allow always for this migration demo
     sample = load_json(SAMPLE_DATA_DIR / "sample_company.json")
-    # Add a mock PAN if missing
-    if "pan" not in sample:
-        sample["pan"] = "ABCDE1234F"
     session_state["company_data"] = sample
     session_state["pipeline_step"] = 1
     session_state["research_results"] = None

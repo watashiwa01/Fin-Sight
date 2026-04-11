@@ -83,7 +83,8 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
-# ─── Sidebar ───
+
+# ─── Sidebar ───
 with st.sidebar:
     st.markdown(f"### ⚡ Intelli-Credit Portal")
     
@@ -391,7 +392,6 @@ with tab0:
             cin = st.text_input("CIN", value=cd.get("cin", ""))
             turnover_cr = st.number_input("Turnover (in Crores)", min_value=0.0, step=1.0, value=float(cd.get("turnover_cr", 100.0)))
         with col2:
-            pan = st.text_input("PAN", value=cd.get("pan", ""))
             industry_val = cd.get("industry", "Manufacturing")
             industries = ["Manufacturing", "IT Services", "Retail", "Healthcare", "Financials", "Other"]
             idx = industries.index(industry_val) if industry_val in industries else 0
@@ -421,7 +421,6 @@ with tab0:
                 st.session_state.company_data.update({
                     "company_name": company_name,
                     "cin": cin,
-                    "pan": pan,
                     "industry": industry,
                     "turnover_cr": turnover_cr,
                     "loan_request": {
