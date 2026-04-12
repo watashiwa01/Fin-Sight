@@ -23,13 +23,12 @@ from config import (
     get_mode_display,
     has_s3_storage,
 )
-from utils import format_inr, load_json, merge_research_financials
+from utils import load_json, format_inr
 from pillar1_ingestor.ocr_engine import extract_text_from_uploaded_file
 from pillar1_ingestor.document_classifier import classify_document
 from pillar1_ingestor.llm_extractor import extract_sync
 from pillar1_ingestor.gst_validator import validate_gst_compliance
 from pillar2_research.agent_orchestrator import run_research_pipeline
-from pillar2_research.financial_search_agent import fetch_financial_metrics, lookup_company_profile
 from pillar3_engine.feature_builder import build_features
 from pillar3_engine.scoring_model import score_credit
 from pillar3_engine.committee_agent import CommitteeAgent
@@ -135,10 +134,6 @@ class ExtractionRequest(BaseModel):
 class ResearchRequest(BaseModel):
     company_name: str
 
-
-class CompanyProfileRequest(BaseModel):
-    company_name: str
-
 @app.get("/api/config")
 async def get_config():
     from config import get_mode_display, IS_DEMO, has_llm_key, has_tavily_key
@@ -150,11 +145,6 @@ async def get_config():
         "has_storage": has_s3_storage(),
         "storage_max_upload_mb": S3_UPLOAD_MAX_MB,
     }
-
-
-@app.post("/api/company-profile")
-async def company_profile(req: CompanyProfileRequest):
-    return lookup_company_profile(req.company_name)
 
 class PresignRequest(BaseModel):
     filename: str
@@ -231,12 +221,6 @@ async def onboarding(data: OnboardingData):
             "proposed_rate_pct": data.proposed_rate_pct
         }
     }
-    quote_data = fetch_financial_metrics(data.company_name)
-    session_state["company_data"] = merge_research_financials(
-        session_state["company_data"],
-        quote_data,
-        data.company_name,
-    )
     session_state["pipeline_step"] = max(session_state["pipeline_step"], 1)
     session_state["research_results"] = None
     session_state["scoring"] = None
@@ -248,11 +232,7 @@ async def onboarding(data: OnboardingData):
 async def load_sample():
     # Allow always for this migration demo
     sample = load_json(SAMPLE_DATA_DIR / "sample_company.json")
-    session_state["company_data"] = merge_research_financials(
-        sample,
-        fetch_financial_metrics(sample.get("company_name", "")),
-        sample.get("company_name", ""),
-    )
+    session_state["company_data"] = sample
     session_state["pipeline_step"] = 1
     session_state["research_results"] = None
     session_state["scoring"] = None
@@ -423,11 +403,33 @@ async def start_research(req: ResearchRequest):
     session_state["research_results"] = research
     session_state["pipeline_step"] = max(session_state["pipeline_step"], 3)
 
-    session_state["company_data"] = merge_research_financials(
-        session_state["company_data"],
-        research.get("financials", {}),
-        research.get("company_name", company_name.title()),
-    )
+    # Automatically Merge found Net Worth/Revenue into company_data
+    if research.get("financials") and not research.get("financials").get("error"):
+        fin_data = research["financials"]
+        if not session_state["company_data"]:
+            session_state["company_data"] = {}
+        
+        cd = session_state["company_data"]
+        # Ensure company name is set for side panel
+        if not cd.get("company_name"):
+            cd["company_name"] = research.get("company_name", company_name.title())
+
+        if "financials" not in cd: cd["financials"] = {}
+        if "fy_2024" not in cd["financials"]: cd["financials"]["fy_2024"] = {}
+        
+        fy24 = cd["financials"]["fy_2024"]
+        
+        # Only overwrite if currently 0 or missing
+        for field in ["net_worth_cr", "revenue_cr", "dscr", "icr", "revenue_cagr_3yr", 
+                      "ebitda_margin_pct", "current_ratio", "de_ratio", 
+                      "tangible_net_worth_cr", "promoter_equity_pct"]:
+            if not fy24.get(field) or fy24.get(field) == 0:
+                fy24[field] = fin_data.get(field, 0)
+
+        # Update Market Cap (always keep latest from search)
+        fy24["market_cap_cr"] = fin_data.get("market_cap_cr", 0)
+        
+        session_state["company_data"] = cd
 
     return {
         "research": research,

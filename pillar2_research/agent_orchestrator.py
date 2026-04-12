@@ -64,7 +64,7 @@ def _node_ecourts(state: ResearchState) -> dict:
 
 def _node_sector(state: ResearchState) -> dict:
     try:
-        return {"sector_results": analyze_sector(state.get("industry", ""))}
+        return {"sector_results": analyze_sector(state["company_name"], state.get("industry", ""))}
     except Exception as e:
         return {"sector_results": {}, "errors": [f"sector_agent: {e}"]}
 

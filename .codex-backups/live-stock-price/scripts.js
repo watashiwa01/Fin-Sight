@@ -22,9 +22,6 @@ let state = {
     five_cs: null,
 };
 
-let companyLookupTimer = null;
-let companyLookupRequestId = 0;
-
 // --- Initialization ---
 document.addEventListener("DOMContentLoaded", async () => {
     initTabs();
@@ -163,63 +160,6 @@ async function apiGet(endpoint) {
     }
 }
 
-function setIndustryAutofillHint(message, mode = "") {
-    const hint = document.getElementById("industry-autofill-hint");
-    if (!hint) return;
-    hint.textContent = message;
-    hint.className = `field-hint${mode ? ` is-${mode}` : ""}`;
-}
-
-async function lookupAndApplyCompanyProfile(companyName) {
-    const trimmedName = (companyName || "").trim();
-    const currentRequestId = ++companyLookupRequestId;
-    const industrySelect = document.getElementById("industry");
-
-    if (!trimmedName || trimmedName.length < 3) {
-        setIndustryAutofillHint("Type a company name to auto-detect sector.");
-        return;
-    }
-
-    setIndustryAutofillHint("Detecting sector...", "loading");
-    try {
-        const response = await apiPostRaw("/company-profile", { company_name: trimmedName });
-        if (currentRequestId !== companyLookupRequestId) return;
-
-        const detectedIndustry = response?.industry || "";
-        if (detectedIndustry && industrySelect) {
-            const availableValues = Array.from(industrySelect.options).map(opt => opt.value);
-            if (!availableValues.includes(detectedIndustry)) {
-                const newOption = document.createElement("option");
-                newOption.value = detectedIndustry;
-                newOption.text = detectedIndustry;
-                industrySelect.appendChild(newOption);
-            }
-            industrySelect.value = detectedIndustry;
-        }
-
-        if (response?.status === "matched" && detectedIndustry) {
-            const rawLabel = [response.sector_raw, response.industry_raw].filter(Boolean).join(" / ");
-            setIndustryAutofillHint(
-                rawLabel
-                    ? `Auto-detected: ${detectedIndustry} from ${rawLabel}`
-                    : `Auto-detected: ${detectedIndustry}`,
-                "success"
-            );
-            return;
-        }
-
-        if (response?.status === "low_confidence" && detectedIndustry) {
-            setIndustryAutofillHint(`Likely sector: ${detectedIndustry}. Please confirm manually.`, "warning");
-            return;
-        }
-
-        setIndustryAutofillHint("Couldn’t confidently detect the sector. You can choose it manually.", "warning");
-    } catch (error) {
-        if (currentRequestId !== companyLookupRequestId) return;
-        setIndustryAutofillHint("Auto-detect unavailable right now. You can choose the sector manually.", "warning");
-    }
-}
-
 function formatBytes(bytes) {
     const mb = bytes / (1024 * 1024);
     if (mb >= 1) return `${mb.toFixed(1)} MB`;
@@ -296,29 +236,12 @@ async function uploadViaStorage(file) {
 // --- Form Handlers ---
 function initForms() {
     // Onboarding Form
-    const companyNameInput = document.getElementById("company_name");
-    if (companyNameInput) {
-        companyNameInput.addEventListener("input", (e) => {
-            const value = e.target.value;
-            clearTimeout(companyLookupTimer);
-            companyLookupTimer = setTimeout(() => {
-                lookupAndApplyCompanyProfile(value);
-            }, 600);
-        });
-        companyNameInput.addEventListener("blur", (e) => {
-            clearTimeout(companyLookupTimer);
-            lookupAndApplyCompanyProfile(e.target.value);
-        });
-    }
-
     const onboardingForm = document.getElementById("onboarding-form");
     if (onboardingForm) {
         onboardingForm.addEventListener("submit", async (e) => {
             e.preventDefault();
-            const companyName = document.getElementById("company_name").value;
-            await lookupAndApplyCompanyProfile(companyName);
             const data = {
-                company_name: companyName,
+                company_name: document.getElementById("company_name").value,
                 cin: document.getElementById("cin").value,
                 industry: document.getElementById("industry").value,
                 turnover_cr: parseFloat(document.getElementById("turnover_cr").value),
@@ -349,17 +272,6 @@ function initForms() {
                 updateUI();
                 switchTab("upload");
                 fillFormWithData(res.company_data);
-
-                const companyName = res.company_data?.company_name || "";
-                if (companyName) {
-                    const researchRes = await apiPost("/research", { company_name: companyName });
-                    if (researchRes) {
-                        state.pipeline_step = Math.max(state.pipeline_step, 3);
-                        state.research_results = researchRes.research;
-                        state.company_data = researchRes.company_data;
-                        updateUI();
-                    }
-                }
             }
         });
     }
@@ -460,22 +372,8 @@ function addFileToResults(res) {
 function fillFormWithData(data) {
     document.getElementById("company_name").value = data.company_name || "";
     document.getElementById("cin").value = data.cin || "";
-    
-    const industryVal = data.industry || "Manufacturing";
-    const industrySelect = document.getElementById("industry");
-    if (industrySelect) {
-        const availableValues = Array.from(industrySelect.options).map(opt => opt.value);
-        if (!availableValues.includes(industryVal)) {
-            const newOption = document.createElement("option");
-            newOption.value = industryVal;
-            newOption.text = industryVal;
-            industrySelect.appendChild(newOption);
-        }
-        industrySelect.value = industryVal;
-    }
-    
+    document.getElementById("industry").value = data.industry || "Manufacturing";
     document.getElementById("turnover_cr").value = data.turnover_cr || 0;
-    setIndustryAutofillHint(data.industry ? `Current sector: ${data.industry}` : "Type a company name to auto-detect sector.");
     
     if (data.loan_request) {
         document.getElementById("loan_type").value = data.loan_request.type || "Working Capital";
@@ -525,25 +423,6 @@ function getCompanyVisuals(cd) {
     return found;
 }
 
-function formatQuotePrice(value, currency = "INR") {
-    if (value === null || value === undefined || value === "") return "";
-    const numeric = Number(value);
-    if (Number.isNaN(numeric)) return String(value);
-
-    const code = (currency || "INR").toUpperCase();
-    if (code === "INR") return `₹ ${numeric.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    if (code === "USD") return `$${numeric.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    return `${code} ${numeric.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
-function formatPercentChange(value) {
-    if (value === null || value === undefined || value === "") return "";
-    const numeric = Number(value);
-    if (Number.isNaN(numeric)) return String(value);
-    const prefix = numeric > 0 ? "+" : "";
-    return `${prefix}${numeric.toFixed(2)}%`;
-}
-
 function updateUI() {
     // Update Pipeline List
     for (let i = 0; i < 5; i++) {
@@ -568,33 +447,15 @@ function updateUI() {
         };
 
         const netWorth = formatValue(cd.financials?.fy_2024?.net_worth_cr);
+        const turnover = formatValue(cd.financials?.fy_2024?.revenue_cr);
+        
         const visuals = getCompanyVisuals(cd);
-        const quote = cd.financials?.fy_2024 || {};
-        const currentPrice = quote.current_price_display
-            || formatQuotePrice(quote.current_price, quote.quote_currency)
-            || (state.research_results ? "Live quote unavailable" : "Run Research");
+        
+        const currentPrice = cd.financials?.fy_2024?.current_price || visuals.price;
         const marketCapText = cd.financials?.fy_2024?.market_cap_cr ? `₹ ${formatValue(cd.financials?.fy_2024?.market_cap_cr)}` : visuals.cap;
-        const priceChange = quote.price_change_display || formatPercentChange(quote.price_change_pct);
-        const quoteStatus = quote.quote_status || "";
-        const priceColor = quoteStatus === "live" ? "#f87171" : "var(--report-subtext)";
-        const priceChangeMarkup = priceChange ? `<span style="font-size: 0.8rem;">(${priceChange})</span>` : "";
+        const priceChange = visuals.change;
         const sector = cd.industry || "Diversified Conglomerate";
         const pan = cd.pan || "N/A";
-        const nseStatus = quote.nse_listing_status || "unknown";
-        const listingLabel = quote.nse_listing_label || "NSE listing unknown";
-        const listingColor = nseStatus === "listed" ? "#4ade80" : nseStatus === "not_listed" ? "#fbbf24" : "var(--report-subtext)";
-        const nseReferenceSymbol = (quote.nse_symbol || "").replace(/\.NS$/i, "") || visuals.nse;
-        const referenceUrl = quote.quote_url
-            || (nseStatus === "listed" && nseReferenceSymbol ? `https://www.nseindia.com/get-quote/equity/${nseReferenceSymbol}` : "")
-            || (!quoteStatus && !quote.nse_symbol ? `https://www.nseindia.com/get-quote/equity/${visuals.nse}` : "");
-        const referenceLabel = quote.quote_source || (nseStatus === "listed" ? "NSE India" : "");
-        const referenceMarkup = referenceUrl
-            ? `<a href="${referenceUrl}" target="_blank" style="color: #60a5fa; font-size: 0.75rem; text-decoration: none; display: flex; align-items: center; justify-content: flex-end; gap: 0.3rem;">Reference: ${referenceLabel} ↗</a>`
-            : `<span style="color: var(--report-subtext); font-size: 0.75rem;">${quote.quote_error || listingLabel || "Run research to fetch a live stock quote."}</span>`;
-        const chartSeries = Array.isArray(visuals.chart) ? [...visuals.chart] : [];
-        if (chartSeries.length && quote.current_price !== undefined && quote.current_price !== null && quote.current_price !== "") {
-            chartSeries[chartSeries.length - 1] = Number(quote.current_price);
-        }
         
         companyArea.innerHTML = `
             <div class="info-block" style="margin-bottom: 1.5rem;">
@@ -605,14 +466,11 @@ function updateUI() {
                 <div style="color: var(--report-subtext); font-size: 0.85rem; margin-bottom: 0.5rem;">
                     Sector: ${sector}
                 </div>
-                <div style="color: ${listingColor}; font-size: 0.85rem; margin-bottom: 0.5rem;">
-                    Listed on NSE: ${nseStatus === "listed" ? "Yes" : nseStatus === "not_listed" ? "No" : "Unknown"}${quote.nse_symbol ? ` (${quote.nse_symbol})` : ""}
-                </div>
                 
                 <div style="display: flex; gap: 1rem; margin-top: 1rem;">
                     <div style="flex: 1; min-width: 45%;">
                         <div style="color: var(--report-subtext); font-size: 0.8rem;">Current Price</div>
-                        <div style="font-size: 1.2rem; font-weight: 600; color: ${priceColor};">${currentPrice} ${priceChangeMarkup}</div>
+                        <div style="font-size: 1.2rem; font-weight: 600; color: #f87171;">${currentPrice} <span style="font-size: 0.8rem;">(${priceChange})</span></div>
                     </div>
                     <div style="flex: 1; min-width: 45%;">
                         <div style="color: var(--report-subtext); font-size: 0.8rem;">Est. Market Cap</div>
@@ -632,7 +490,9 @@ function updateUI() {
                 </div>
 
                 <div style="margin-top: 1rem; text-align: right;">
-                    ${referenceMarkup}
+                    <a href="https://www.nseindia.com/get-quote/equity/${visuals.nse}" target="_blank" style="color: #60a5fa; font-size: 0.75rem; text-decoration: none; display: flex; align-items: center; justify-content: flex-end; gap: 0.3rem;">
+                         Reference: NSE India ↗
+                    </a>
                 </div>
             </div>
             
@@ -654,7 +514,7 @@ function updateUI() {
                         labels: ['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'],
                         datasets: [{
                             label: 'Share Price (₹)',
-                            data: chartSeries,
+                            data: visuals.chart,
                             borderColor: '#3b82f6',
                             backgroundColor: 'rgba(59, 130, 246, 0.1)',
                             borderWidth: 2,
@@ -1016,35 +876,13 @@ function renderResearchResults(research) {
                     </div>` : ""}
                 </div>
                 <div>
-                    <h4 style="color: var(--accent); margin-bottom: 1rem; border-bottom: 1px solid var(--report-card-border); padding-bottom: 0.5rem;">📈 Sector Analysis</h4>
-                    
-                    <div style="background: var(--report-inner-bg); padding: 1.2rem; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid var(--report-card-border);">
-                        <div style="display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
-                            <div style="flex: 1; min-width: 200px;">
-                                <p style="margin: 0; color: #60a5fa; font-weight: bold; font-size: 0.85rem; text-transform: uppercase;">Major Sector</p>
-                                <p style="margin: 0.3rem 0 0; color: var(--report-text); font-size: 1.05rem;">${research.sector?.major_sector || research.sector?.industry || "N/A"}</p>
-                            </div>
-                            <div style="flex: 2; min-width: 300px;">
-                                <p style="margin: 0; color: #facc15; font-weight: bold; font-size: 0.85rem; text-transform: uppercase;">Major Competitors</p>
-                                <p style="margin: 0.3rem 0 0; color: var(--report-text); font-size: 0.95rem;">${Array.isArray(research.sector?.major_competitors) && research.sector.major_competitors.length > 0 ? research.sector.major_competitors.join(" &bull; ") : "N/A"}</p>
-                            </div>
-                        </div>
-                        
-                        <div style="padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.05);">
-                            <h5 style="color: #f87171; margin-top: 0; margin-bottom: 0.4rem; font-size: 0.85rem; text-transform: uppercase;">Market Sentiment & Impact</h5>
-                            <p style="margin: 0; font-size: 0.95rem; color: var(--report-subtext); line-height: 1.5; border-left: 3px solid #f87171; padding-left: 0.8rem;">
-                                ${research.sector?.market_sentiment || "Sentiment data unavailable."}
-                            </p>
-                        </div>
-                    </div>
-
-                    <p style="margin-bottom: 1.2rem; color: var(--report-text); font-size: 0.95rem;">${research.sector?.summary || "N/A"}</p>
-                    
+                    <h4 style="color: var(--accent)">📈 Sector Analysis</h4>
+                    <p style="margin-bottom: 0.8rem; color: var(--report-text);">${research.sector?.summary || "N/A"}</p>
                     <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
                         <div style="flex: 1; min-width: 250px;">
-                            ${research.sector?.key_factors ? `<h5 style="color: var(--report-subtext); margin-bottom: 0.5rem; margin-top: 0;">Key Growth Factors / Risks</h5><ul style="font-size: 0.9rem; margin-top:0; padding-left: 1.2rem; color: var(--report-text);">${research.sector.key_factors.map(f => `<li style="margin-bottom: 0.4rem;">${f}</li>`).join('')}</ul>` : ''}
+                            ${research.sector?.key_factors ? `<ul style="font-size: 0.9rem; margin-top:0.5rem; color: var(--report-text);">${research.sector.key_factors.map(f => `<li style="margin-bottom: 0.3rem;">${f}</li>`).join('')}</ul>` : ''}
                         </div>
-                        <div style="flex: 1; min-width: 200px; height: 160px; position: relative;">
+                        <div style="flex: 1; min-width: 200px; height: 150px; position: relative;">
                             <canvas id="sectorChart"></canvas>
                         </div>
                     </div>

@@ -349,6 +349,24 @@ body.light-theme .main-header h1 {
     gap: 0.5rem;
 }
 
+.field-hint {
+    font-size: 0.85rem;
+    color: var(--report-subtext);
+    min-height: 1.2rem;
+}
+
+.field-hint.is-loading {
+    color: #60a5fa;
+}
+
+.field-hint.is-success {
+    color: #34d399;
+}
+
+.field-hint.is-warning {
+    color: #fbbf24;
+}
+
 label {
     font-size: 0.9rem;
     font-weight: 500;

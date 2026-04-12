@@ -18,13 +18,7 @@ from config import (
     has_tavily_key, has_azure_di, has_databricks,
     LLM_PROVIDER
 )
-from utils import (
-    format_pct_change,
-    format_quote_price,
-    format_inr,
-    load_json,
-    merge_research_financials,
-)
+from utils import load_json, format_inr
 
 def _render_extraction_visuals(data: dict, doc_type: str):
     """Render user-friendly visuals instead of raw JSON."""
@@ -628,41 +622,6 @@ with tab1:
             if cd.get('registered_office'):
                 st.markdown(f"Registered: {cd['registered_office']}")
 
-            fy24 = cd.get("financials", {}).get("fy_2024", {})
-            nse_status = fy24.get("nse_listing_status", "unknown")
-            nse_symbol = fy24.get("nse_symbol", "")
-            nse_label = (
-                "Yes" if nse_status == "listed"
-                else "No" if nse_status == "not_listed"
-                else "Unknown"
-            )
-            status_suffix = f" ({nse_symbol})" if nse_symbol else ""
-            st.markdown(f"Listed on NSE: **{nse_label}{status_suffix}**")
-            if fy24.get("quote_status") or fy24.get("current_price") is not None:
-                quote_display = fy24.get("current_price_display") or format_quote_price(
-                    fy24.get("current_price"),
-                    fy24.get("quote_currency", "INR"),
-                )
-                price_delta = fy24.get("price_change_display") or format_pct_change(
-                    fy24.get("price_change_pct")
-                )
-                st.markdown("---")
-                st.markdown("### Live Stock Price")
-                st.metric(
-                    "Current Price",
-                    quote_display or "Live quote unavailable",
-                    delta=price_delta or None,
-                )
-                if fy24.get("quote_status") != "live" and fy24.get("quote_error"):
-                    st.caption(fy24["quote_error"])
-                elif fy24.get("quote_source") and fy24.get("ticker"):
-                    ref_text = f"{fy24['quote_source']} | {fy24['ticker']}"
-                    if fy24.get("exchange"):
-                        ref_text = f"{ref_text} | {fy24['exchange']}"
-                    st.caption(ref_text)
-                if fy24.get("quote_url"):
-                    st.markdown(f"[Open market quote]({fy24['quote_url']})")
-
             loan = cd.get("loan_request", {})
             st.markdown("---")
             st.markdown("### 💰 Loan Request")
@@ -829,11 +788,6 @@ with tab2:
             )
 
             st.session_state.research_results = research
-            st.session_state.company_data = merge_research_financials(
-                st.session_state.company_data,
-                research.get("financials", {}),
-                research.get("company_name", company_name),
-            )
             st.session_state.pipeline_step = max(st.session_state.pipeline_step, 3)
 
             progress_bar.progress(1.0, text="✅ All agents completed!")
