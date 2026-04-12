@@ -271,7 +271,7 @@ async def upload_document(file: UploadFile = File(...)):
     
     # Text extraction & Classification
     try:
-        return _process_document_from_path(file_path, safe_name)
+        return await asyncio.to_thread(_process_document_from_path, file_path, safe_name)
     except Exception as e:
         print(f"Extraction error: {e}")
         raise HTTPException(status_code=500, detail=str(e))

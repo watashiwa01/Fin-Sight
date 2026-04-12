@@ -34,12 +34,17 @@ def _extract_best(pdf_bytes: bytes, pdf_path: str = None, max_pages: int = 20) -
         if result.get("method") != "error":
             return result
 
-    # 2. Try pdfplumber
+    # 2. Try PyMuPDF (fastest for digital PDFs)
+    result = _extract_with_pymupdf(pdf_bytes=pdf_bytes, max_pages=max_pages)
+    if result.get("method") != "error" and len(result.get("full_text", "").strip()) > 50:
+        return result
+
+    # 3. Try pdfplumber
     result = _extract_with_pdfplumber(pdf_bytes=pdf_bytes, max_pages=max_pages)
     if result.get("method") != "error" and len(result.get("full_text", "").strip()) > 50:
         return result
 
-    # 3. Fallback to Tesseract OCR
+    # 4. Fallback to Tesseract OCR
     return _extract_with_ocr(pdf_bytes=pdf_bytes, max_pages=max_pages)
 
 
@@ -119,6 +124,45 @@ def _extract_with_azure_di(pdf_bytes: bytes, max_pages: int = 20) -> dict:
         return {"pages": [], "full_text": "", "num_pages": 0, "method": "error",
                 "error": f"Azure DI failed: {str(e)}"}
 
+
+def _extract_with_pymupdf(pdf_bytes: bytes, max_pages: int = 20) -> dict:
+    """Extract text using PyMuPDF (fitz) - extremely fast for digital PDFs."""
+    try:
+        import fitz  # PyMuPDF
+        
+        doc = fitz.open("pdf", pdf_bytes)
+        pages = []
+        full_text_parts = []
+        
+        page_count = min(len(doc), max_pages)
+        for i in range(page_count):
+            page = doc[i]
+            # Use 'text' mode for simple fast extraction
+            page_text = page.get_text("text") or ""
+            
+            pages.append({
+                "page_num": i + 1,
+                "text": page_text,
+                "tables": [], # PyMuPDF basic text doesn't explicitly chunk tables perfectly without extra work
+            })
+            full_text_parts.append(page_text)
+            
+        doc.close()
+        full_text = "\n\n".join(full_text_parts)
+        
+        if len(full_text.strip()) < 50 and len(doc) > 0:
+            return {"pages": [], "full_text": "", "num_pages": 0, "method": "error", "error": "PyMuPDF text empty"}
+            
+        return {
+            "pages": pages,
+            "full_text": full_text,
+            "num_pages": len(pages),
+            "method": "pymupdf",
+        }
+    except ImportError:
+        return {"pages": [], "full_text": "", "num_pages": 0, "method": "error", "error": "PyMuPDF not installed"}
+    except Exception as e:
+        return {"pages": [], "full_text": "", "num_pages": 0, "method": "error", "error": str(e)}
 
 def _extract_with_pdfplumber(pdf_path: str = None, pdf_bytes: bytes = None, max_pages: int = 20) -> dict:
     """Extract text using pdfplumber (best for digital PDFs)."""

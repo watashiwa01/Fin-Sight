@@ -372,7 +372,9 @@ function initForms() {
             for (let file of files) {
                 try {
                     // Vercel serverless functions reject request bodies > 4.5MB (413 FUNCTION_PAYLOAD_TOO_LARGE).
-                    const DIRECT_UPLOAD_MAX_BYTES = Math.floor(4.5 * 1024 * 1024);
+                    // If local, allow up to 50MB directly without S3 requirement.
+                    const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" || window.location.origin === "null";
+                    const DIRECT_UPLOAD_MAX_BYTES = isLocal ? Math.floor(50 * 1024 * 1024) : Math.floor(4.5 * 1024 * 1024);
 
                     let result = null;
                     if (file.size > DIRECT_UPLOAD_MAX_BYTES) {
@@ -556,8 +558,15 @@ function updateUI() {
 
     // Update Company Sidebar Info
     const companyArea = document.getElementById("active-company-info");
+    const researchCompanyNameInput = document.getElementById("research_company_name");
+    
     if (state.company_data) {
         const cd = state.company_data;
+        
+        if (researchCompanyNameInput && !researchCompanyNameInput.value) {
+            researchCompanyNameInput.value = cd.company_name;
+        }
+
         const lr = cd.loan_request || {};
         
         // Financial formatting for large values
@@ -713,57 +722,7 @@ async function runLlmExtraction(filename, docType, fullText) {
         if (!state.extracted_data) state.extracted_data = {};
         state.extracted_data[filename] = res.extracted;
         updateUI();
-        addExtractionPreview(filename, res.extracted);
     }
-}
-
-function addExtractionPreview(filename, data) {
-    // Render a small preview of extracted data with IDE-like syntax highlighting
-    const container = document.getElementById("extraction-results");
-    const previewDiv = document.createElement("div");
-    previewDiv.className = "card glass data-preview";
-    
-    // Custom JSON Syntax Highlighter
-    const syntaxHighlight = (json) => {
-        if (typeof json != 'string') {
-             json = JSON.stringify(json, undefined, 2);
-        }
-        json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
-            let cls = 'color: #d1d5db;'; // Default text color
-            if (/^"/.test(match)) {
-                if (/:$/.test(match)) {
-                    cls = 'color: #93c5fd; font-weight: 500;'; // Keys (Blue)
-                } else {
-                    cls = 'color: #86efac;'; // Strings (Green)
-                }
-            } else if (/true|false/.test(match)) {
-                cls = 'color: #fca5a5; font-style: italic;'; // Booleans (Red/Pink)
-            } else if (/null/.test(match)) {
-                cls = 'color: #9ca3af; font-style: italic;'; // Null (Gray)
-            } else {
-                cls = 'color: #fcd34d;'; // Numbers (Yellow)
-            }
-            return '<span style="' + cls + '">' + match + '</span>';
-        });
-    };
-
-    const highlightedJSON = syntaxHighlight(data);
-
-    previewDiv.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--report-card-border); padding-bottom: 0.8rem; margin-bottom: 1rem;">
-            <h4 style="margin: 0; color: var(--report-text);">📊 Extracted Data: <span style="color: var(--accent); font-weight: normal;">${filename}</span></h4>
-            <div style="display: flex; gap: 0.5rem;">
-                <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: #ef4444;"></span>
-                <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: #eab308;"></span>
-                <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: #22c55e;"></span>
-            </div>
-        </div>
-        <div style="background: var(--report-inner-bg); padding: 1.5rem; border-radius: 6px; overflow-x: auto; border: 1px solid var(--report-card-border); box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);">
-            <pre style="margin: 0; font-family: 'Consolas', 'Monaco', 'Courier New', monospace; font-size: 0.9rem; line-height: 1.5; color: var(--report-text);">${highlightedJSON}</pre>
-        </div>
-    `;
-    container.appendChild(previewDiv);
 }
 
 // --- GST Validation ---
@@ -796,10 +755,22 @@ function renderGstResults(gst) {
                 <h4 style="color: #93c5fd; margin-bottom: 1rem; border-bottom: 1px solid var(--report-card-border); padding-bottom: 0.5rem;">Key Disclosures</h4>
                 <ul style="list-style-type: none; padding: 0; margin: 0; font-size: 0.95rem; color: var(--report-text);">
                     <li style="margin-bottom: 0.8rem; display: flex; justify-content: space-between;">
-                        <span>GSTR-3B Declared Turnover:</span>
-                        <strong style="color: var(--report-text)">₹ ${gst.summary?.gstr_3b_turnover_cr || 0} Cr</strong>
+                        <span>GSTR-3B Declared Turnover (PDF Extracted):</span>
+                        <strong style="color: ${(gst.summary?.real_gstr_3b_turnover_cr || 0) !== (gst.summary?.gstr_3b_turnover_cr || 0) ? '#f87171' : 'var(--report-text)'}">₹ ${gst.summary?.gstr_3b_turnover_cr || 0} Cr</strong>
                     </li>
                     <li style="margin-bottom: 0.8rem; display: flex; justify-content: space-between;">
+                        <span>Live GSTR-3B Turnover (GSTN Fetched):</span>
+                        <strong style="color: #4ade80">₹ ${gst.summary?.real_gstr_3b_turnover_cr || gst.summary?.gstr_3b_turnover_cr || 0} Cr</strong>
+                    </li>
+                    <li style="margin-bottom: 0.8rem; display: flex; justify-content: space-between; border-top: 1px dashed var(--card-border); padding-top: 0.8rem;">
+                        <span>GSTR-2A Purchases (PDF Extracted):</span>
+                        <strong style="color: ${(gst.summary?.real_gstr_2a_purchases_cr || 0) !== (gst.summary?.gstr_2a_purchases_cr || 0) ? '#f87171' : 'var(--report-text)'}">₹ ${gst.summary?.gstr_2a_purchases_cr || 0} Cr</strong>
+                    </li>
+                    <li style="margin-bottom: 0.8rem; display: flex; justify-content: space-between;">
+                        <span>Live GSTR-2A Purchases (GSTN Fetched):</span>
+                        <strong style="color: #4ade80">₹ ${gst.summary?.real_gstr_2a_purchases_cr || gst.summary?.gstr_2a_purchases_cr || 0} Cr</strong>
+                    </li>
+                    <li style="margin-bottom: 0.8rem; display: flex; justify-content: space-between; border-top: 1px solid var(--report-card-border); padding-top: 0.8rem;">
                         <span>Bank Credit Entries:</span>
                         <strong style="color: var(--report-text)">₹ ${gst.summary?.bank_credit_entries_cr || 0} Cr</strong>
                     </li>
