@@ -89,8 +89,8 @@ def _scrape_google_news(cname: str) -> list[dict]:
             soup = BeautifulSoup(res.text, 'html.parser')
             links = soup.find_all('a', class_='JtKRv')
             
-            pos_words = ["growth", "profit", "surges", "jumps", "wins", "record", "soars", "up", "positive", "expansion", "approval", "success", "buy", "launch"]
-            neg_words = ["loss", "falls", "slumps", "plunges", "lawsuit", "down", "negative", "investigation", "fraud", "default", "warning", "sell", "penalty", "crash"]
+            pos_words = ["growth", "profit", "surges", "jumps", "wins", "record", "soars", "up", "positive", "expansion", "approval", "success", "buy", "launch", "partner", "empower", "excellence", "shaping", "top"]
+            neg_words = ["loss", "falls", "slumps", "plunges", "lawsuit", "down", "negative", "investigation", "fraud", "default", "warning", "sell", "penalty", "crash", "dead", "death", "suicide", "murder", "killed", "arrest", "police", "scam", "fir", "fake", "violation", "protest"]
 
             for link in links[:6]:  
                 title = link.text
@@ -120,7 +120,7 @@ def _scrape_google_news(cname: str) -> list[dict]:
                     "sentiment": label,
                     "sentiment_score": round(score, 2),
                     "source": href,
-                    "content_snippet": f"Recent coverage regarding {cname}."
+                    "content_snippet": f"News report indicating {label} sentiment based on headline analysis for {cname}."
                 })
     except Exception as e:
         print(f"Scraping failed: {e}")
@@ -221,8 +221,8 @@ Return JSON array: [{{"title": "...", "sentiment": "positive/negative/neutral", 
 
 def _keyword_sentiment(articles: list[dict]) -> list[dict]:
     """Simple keyword-based sentiment analysis fallback."""
-    negative_words = {"fraud", "default", "npa", "litigation", "arrest", "scam", "wilful", "ban", "penalty", "fine"}
-    positive_words = {"growth", "expansion", "profit", "award", "order", "partnership", "investment", "launch"}
+    negative_words = {"fraud", "default", "npa", "litigation", "arrest", "scam", "wilful", "ban", "penalty", "fine", "dead", "death", "suicide", "murder", "killed", "police", "fir", "fake", "violation"}
+    positive_words = {"growth", "expansion", "profit", "award", "order", "partnership", "investment", "launch", "partner", "empower", "excellence", "top"}
 
     for article in articles:
         title_lower = article.get("title", "").lower()
