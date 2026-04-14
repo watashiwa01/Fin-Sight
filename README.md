@@ -1,4 +1,4 @@
-# Fin-Sight (DrishtiCredit)
+# Fin-Sight (Fin-Sight)
 
 AI-powered credit appraisal engine with a FastAPI backend serving a simple static frontend.
 

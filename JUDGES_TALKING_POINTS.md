@@ -1,8 +1,8 @@
-# 🏆 DrishtiCredit - Talking Points for Hackathon Judges
+# 🏆 Fin-Sight - Talking Points for Hackathon Judges
 
 ## 🎯 ELEVATOR PITCH (30 seconds)
 
-**"DrishtiCredit is an AI-powered corporate credit appraisal engine that automates what traditionally takes financial analysts 2-3 days in minutes. Using a 3-pillar architecture with autonomous AI agents, document intelligence, and machine learning scoring, we deliver institutional-grade credit analysis with explainable AI insights—all accessible through an intuitive web interface."**
+**"Fin-Sight is an AI-powered corporate credit appraisal engine that automates what traditionally takes financial analysts 2-3 days in minutes. Using a 3-pillar architecture with autonomous AI agents, document intelligence, and machine learning scoring, we deliver institutional-grade credit analysis with explainable AI insights—all accessible through an intuitive web interface."**
 
 ---
 
@@ -319,7 +319,7 @@ Autonomous Agents: 5
 
 ## 📝 CLOSING STATEMENT
 
-*"DrishtiCredit reimagines corporate credit analysis. We combine institutional credit frameworks (5 Cs), cutting-edge AI (LLMs + ML), autonomous research agents, and explainable scoring into a production-ready system. The result: credit decisions that traditionally take 48 hours now take 10 minutes, with better accuracy and full audit trails. We've engineered for scale, compliance, and real-world deployment. This isn't a prototype—it's the future of lending."*
+*"Fin-Sight reimagines corporate credit analysis. We combine institutional credit frameworks (5 Cs), cutting-edge AI (LLMs + ML), autonomous research agents, and explainable scoring into a production-ready system. The result: credit decisions that traditionally take 48 hours now take 10 minutes, with better accuracy and full audit trails. We've engineered for scale, compliance, and real-world deployment. This isn't a prototype—it's the future of lending."*
 
 ---
 
