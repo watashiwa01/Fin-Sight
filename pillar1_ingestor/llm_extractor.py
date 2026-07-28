@@ -132,13 +132,13 @@ def get_demo_extraction(doc_type: str, company_name: str = "Bharat Steel Industr
             "taxable_turnover": {"value": gst["gstr_3b_turnover_cr"] * 10_000_000, "source_quote": f"Total Taxable Value: {gst['gstr_3b_turnover_cr']} Cr"},
             "total_tax_paid": gst["gstr_3b_turnover_cr"] * 10_000_000 * 0.18,
             "itc_claimed": gst["gstr_2a_purchases_cr"] * 10_000_000 * 0.18,
-            "confidence_score": 0.99,
+            "confidence_score": 0.94,
         }
     else:
         return {
             "document_summary": "Document processed successfully in demo mode.",
             "company_name": cname,
-            "confidence": 0.75,
+            "confidence": 0.81,
             "extraction_method": "demo",
         }
 
